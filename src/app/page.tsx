@@ -10,7 +10,7 @@ import { TimelineView } from "@/components/TimelineView"
 import { Button } from "@/components/ui/button"
 import { Calendar as CalendarIcon, Filter, Layers, Layout, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { format, addDays, isSameDay, parseISO } from "date-fns"
+import { format, addDays, isSameDay, subDays } from "date-fns"
 
 export default function AquaFlowPlanner() {
   const [isClient, setIsClient] = useState(false)
@@ -21,6 +21,7 @@ export default function AquaFlowPlanner() {
   })
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [viewDate, setViewDate] = useState<Date>(new Date())
   const [filter, setFilter] = useState<"all" | "completed" | "incomplete">("all")
 
   useEffect(() => {
@@ -45,6 +46,14 @@ export default function AquaFlowPlanner() {
     setTasks(tasks.filter(t => t.id !== id))
   }
 
+  const handlePrevWeek = () => {
+    setViewDate(prev => subDays(prev, 7))
+  }
+
+  const handleNextWeek = () => {
+    setViewDate(prev => addDays(prev, 7))
+  }
+
   const filteredTasks = useMemo(() => {
     const dateStr = format(selectedDate, "yyyy-MM-dd")
     return tasks
@@ -62,13 +71,12 @@ export default function AquaFlowPlanner() {
       })
   }, [tasks, selectedDate, filter])
 
-  // Week view generation
+  // Week view generation based on viewDate
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
-      const date = addDays(new Date(), i - 3) // Center on today somewhat
-      return date
+      return addDays(viewDate, i - 3) // Center on viewDate
     })
-  }, [])
+  }, [viewDate])
 
   if (!isClient) return null
 
@@ -121,9 +129,19 @@ export default function AquaFlowPlanner() {
             <DailySettings schedule={schedule} onScheduleChange={setSchedule} />
             
             <div className="space-y-3">
-              <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2 uppercase tracking-wider">
-                <CalendarIcon className="h-4 w-4" /> Calendar
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2 uppercase tracking-wider">
+                  <CalendarIcon className="h-4 w-4" /> Calendar
+                </h3>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handlePrevWeek}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNextWeek}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               <div className="grid grid-cols-7 gap-2">
                 {weekDays.map((date) => {
                   const isActive = isSameDay(date, selectedDate)
