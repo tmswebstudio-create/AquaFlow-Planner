@@ -161,7 +161,7 @@ export default function AquaFlowPlanner() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Daily Progress</span>
-                  <span className="text-sm font-bold text-primary">
+                  <span className="text-sm font-bold text-accent">
                     {dailyTasks.length > 0 
                       ? Math.round((completedTasks.length / dailyTasks.length) * 100) 
                       : 0}%
@@ -169,20 +169,20 @@ export default function AquaFlowPlanner() {
                 </div>
                 <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                    <div 
-                    className="h-full bg-primary transition-all duration-500 ease-out" 
+                    className="h-full bg-accent transition-all duration-500 ease-out" 
                     style={{ 
                       width: `${dailyTasks.length > 0 ? (completedTasks.length / dailyTasks.length) * 100 : 0}%` 
                     }} 
                    />
                 </div>
                 <div className="flex gap-4 pt-2">
-                  <div className="flex-1 bg-primary/5 p-3 rounded-xl border border-primary/10">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Done</p>
-                    <p className="text-xl font-bold text-primary">{completedTasks.length}</p>
-                  </div>
                   <div className="flex-1 bg-accent/5 p-3 rounded-xl border border-accent/10">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Done</p>
+                    <p className="text-xl font-bold text-accent">{completedTasks.length}</p>
+                  </div>
+                  <div className="flex-1 bg-primary/5 p-3 rounded-xl border border-primary/10">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold">Pending</p>
-                    <p className="text-xl font-bold text-accent">{pendingTasks.length}</p>
+                    <p className="text-xl font-bold text-primary">{pendingTasks.length}</p>
                   </div>
                 </div>
               </div>
