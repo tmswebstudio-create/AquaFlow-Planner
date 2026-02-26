@@ -15,10 +15,7 @@ import { format, addDays, isSameDay, subDays } from "date-fns"
 export default function AquaFlowPlanner() {
   const [isClient, setIsClient] = useState(false)
   const [tasks, setTasks] = useLocalStorage<Task[]>("aquaflow_tasks", [])
-  const [schedule, setSchedule] = useLocalStorage<DailySchedule>("aquaflow_schedule", {
-    wakeUpTime: "07:00",
-    sleepTime: "22:00"
-  })
+  const [schedules, setSchedules] = useLocalStorage<Record<string, DailySchedule>>("aquaflow_schedules", {})
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
@@ -27,6 +24,12 @@ export default function AquaFlowPlanner() {
   useEffect(() => {
     setIsClient(true)
   }, [])
+
+  const dateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
+
+  const currentSchedule = useMemo(() => {
+    return schedules[dateKey] || { wakeUpTime: "07:00", sleepTime: "22:00" }
+  }, [schedules, dateKey])
 
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed">) => {
     const newTask: Task = {
@@ -46,6 +49,13 @@ export default function AquaFlowPlanner() {
     setTasks(tasks.filter(t => t.id !== id))
   }
 
+  const handleScheduleChange = (newSchedule: DailySchedule) => {
+    setSchedules(prev => ({
+      ...prev,
+      [dateKey]: newSchedule
+    }))
+  }
+
   const handlePrevWeek = () => {
     setViewDate(prev => subDays(prev, 7))
   }
@@ -55,9 +65,8 @@ export default function AquaFlowPlanner() {
   }
 
   const filteredTasks = useMemo(() => {
-    const dateStr = format(selectedDate, "yyyy-MM-dd")
     return tasks
-      .filter(t => t.date === dateStr)
+      .filter(t => t.date === dateKey)
       .filter(t => {
         if (filter === "completed") return t.completed
         if (filter === "incomplete") return !t.completed
@@ -69,12 +78,11 @@ export default function AquaFlowPlanner() {
         if (b.time) return 1
         return a.createdAt - b.createdAt
       })
-  }, [tasks, selectedDate, filter])
+  }, [tasks, dateKey, filter])
 
-  // Week view generation based on viewDate
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
-      return addDays(viewDate, i - 3) // Center on viewDate
+      return addDays(viewDate, i - 3)
     })
   }, [viewDate])
 
@@ -82,7 +90,6 @@ export default function AquaFlowPlanner() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="bg-white border-b sticky top-0 z-10 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -111,12 +118,11 @@ export default function AquaFlowPlanner() {
                 </Button>
               ))}
             </div>
-            <AddTaskDialog onAdd={handleAddTask} defaultDate={format(selectedDate, "yyyy-MM-dd")} />
+            <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
           </div>
           
-          {/* Mobile Add Button */}
           <div className="md:hidden">
-             <AddTaskDialog onAdd={handleAddTask} defaultDate={format(selectedDate, "yyyy-MM-dd")} />
+             <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
           </div>
         </div>
       </header>
@@ -124,9 +130,8 @@ export default function AquaFlowPlanner() {
       <main className="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Sidebar / Left Column */}
           <div className="lg:col-span-4 space-y-6">
-            <DailySettings schedule={schedule} onScheduleChange={setSchedule} />
+            <DailySettings schedule={currentSchedule} onScheduleChange={handleScheduleChange} />
             
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -206,7 +211,6 @@ export default function AquaFlowPlanner() {
             </div>
           </div>
 
-          {/* Main Column */}
           <div className="lg:col-span-8 space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
@@ -216,7 +220,6 @@ export default function AquaFlowPlanner() {
                 <p className="text-muted-foreground">Manage your tasks for {format(selectedDate, "EEEE")}.</p>
               </div>
 
-              {/* Mobile Only Filter Switch */}
               <div className="md:hidden flex bg-secondary p-1 rounded-lg w-fit">
                 {(["all", "incomplete", "completed"] as const).map((f) => (
                   <Button
@@ -235,7 +238,7 @@ export default function AquaFlowPlanner() {
               </div>
             </div>
 
-            <TimelineView schedule={schedule} tasks={filteredTasks} />
+            <TimelineView schedule={currentSchedule} tasks={filteredTasks} />
 
             <div className="space-y-3">
               {filteredTasks.length > 0 ? (
@@ -259,7 +262,7 @@ export default function AquaFlowPlanner() {
                     Your flow is empty for this date. Add a new task to get started!
                   </p>
                   <div className="mt-6">
-                    <AddTaskDialog onAdd={handleAddTask} defaultDate={format(selectedDate, "yyyy-MM-dd")} />
+                    <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
                   </div>
                 </div>
               )}
