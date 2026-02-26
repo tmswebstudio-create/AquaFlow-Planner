@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -8,7 +9,7 @@ import { AddTaskDialog } from "@/components/AddTaskDialog"
 import { TaskItem } from "@/components/TaskItem"
 import { TimelineView } from "@/components/TimelineView"
 import { Button } from "@/components/ui/button"
-import { Calendar as CalendarIcon, Filter, Layers, Layout, ChevronLeft, ChevronRight } from "lucide-react"
+import { Calendar as CalendarIcon, Layers, Layout, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format, addDays, isSameDay, subDays } from "date-fns"
 
@@ -19,7 +20,6 @@ export default function AquaFlowPlanner() {
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
-  const [filter, setFilter] = useState<"all" | "completed" | "incomplete">("all")
 
   useEffect(() => {
     setIsClient(true)
@@ -64,21 +64,19 @@ export default function AquaFlowPlanner() {
     setViewDate(prev => addDays(prev, 7))
   }
 
-  const filteredTasks = useMemo(() => {
+  const dailyTasks = useMemo(() => {
     return tasks
       .filter(t => t.date === dateKey)
-      .filter(t => {
-        if (filter === "completed") return t.completed
-        if (filter === "incomplete") return !t.completed
-        return true
-      })
       .sort((a, b) => {
         if (a.time && b.time) return a.time.localeCompare(b.time)
         if (a.time) return -1
         if (b.time) return 1
         return a.createdAt - b.createdAt
       })
-  }, [tasks, dateKey, filter])
+  }, [tasks, dateKey])
+
+  const pendingTasks = useMemo(() => dailyTasks.filter(t => !t.completed), [dailyTasks])
+  const completedTasks = useMemo(() => dailyTasks.filter(t => t.completed), [dailyTasks])
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
@@ -101,28 +99,8 @@ export default function AquaFlowPlanner() {
             </h1>
           </div>
           
-          <div className="hidden md:flex items-center gap-4">
-            <div className="flex bg-secondary p-1 rounded-lg">
-              {(["all", "incomplete", "completed"] as const).map((f) => (
-                <Button
-                  key={f}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFilter(f)}
-                  className={cn(
-                    "capitalize text-xs font-semibold px-4 h-8 rounded-md transition-all",
-                    filter === f ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-primary"
-                  )}
-                >
-                  {f}
-                </Button>
-              ))}
-            </div>
+          <div className="flex items-center gap-4">
             <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
-          </div>
-          
-          <div className="md:hidden">
-             <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
           </div>
         </div>
       </header>
@@ -184,8 +162,8 @@ export default function AquaFlowPlanner() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Daily Progress</span>
                   <span className="text-sm font-bold text-primary">
-                    {filteredTasks.length > 0 
-                      ? Math.round((filteredTasks.filter(t => t.completed).length / filteredTasks.length) * 100) 
+                    {dailyTasks.length > 0 
+                      ? Math.round((completedTasks.length / dailyTasks.length) * 100) 
                       : 0}%
                   </span>
                 </div>
@@ -193,18 +171,18 @@ export default function AquaFlowPlanner() {
                    <div 
                     className="h-full bg-primary transition-all duration-500 ease-out" 
                     style={{ 
-                      width: `${filteredTasks.length > 0 ? (filteredTasks.filter(t => t.completed).length / filteredTasks.length) * 100 : 0}%` 
+                      width: `${dailyTasks.length > 0 ? (completedTasks.length / dailyTasks.length) * 100 : 0}%` 
                     }} 
                    />
                 </div>
                 <div className="flex gap-4 pt-2">
                   <div className="flex-1 bg-primary/5 p-3 rounded-xl border border-primary/10">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold">Done</p>
-                    <p className="text-xl font-bold text-primary">{filteredTasks.filter(t => t.completed).length}</p>
+                    <p className="text-xl font-bold text-primary">{completedTasks.length}</p>
                   </div>
                   <div className="flex-1 bg-accent/5 p-3 rounded-xl border border-accent/10">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold">Pending</p>
-                    <p className="text-xl font-bold text-accent">{filteredTasks.filter(t => !t.completed).length}</p>
+                    <p className="text-xl font-bold text-accent">{pendingTasks.length}</p>
                   </div>
                 </div>
               </div>
@@ -219,38 +197,46 @@ export default function AquaFlowPlanner() {
                 </h2>
                 <p className="text-muted-foreground">Manage your tasks for {format(selectedDate, "EEEE")}.</p>
               </div>
-
-              <div className="md:hidden flex bg-secondary p-1 rounded-lg w-fit">
-                {(["all", "incomplete", "completed"] as const).map((f) => (
-                  <Button
-                    key={f}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFilter(f)}
-                    className={cn(
-                      "capitalize text-[10px] font-semibold px-3 h-7 rounded-md",
-                      filter === f ? "bg-white text-primary shadow-sm" : "text-muted-foreground"
-                    )}
-                  >
-                    {f}
-                  </Button>
-                ))}
-              </div>
             </div>
 
-            <TimelineView schedule={currentSchedule} tasks={filteredTasks} />
+            <TimelineView schedule={currentSchedule} tasks={dailyTasks} />
 
-            <div className="space-y-3">
-              {filteredTasks.length > 0 ? (
-                <div className="grid gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  {filteredTasks.map(task => (
-                    <TaskItem 
-                      key={task.id} 
-                      task={task} 
-                      onToggle={handleToggleTask} 
-                      onDelete={handleDeleteTask}
-                    />
-                  ))}
+            <div className="space-y-8">
+              {dailyTasks.length > 0 ? (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-8">
+                  {pendingTasks.length > 0 && (
+                    <div className="grid gap-3">
+                      {pendingTasks.map(task => (
+                        <TaskItem 
+                          key={task.id} 
+                          task={task} 
+                          onToggle={handleToggleTask} 
+                          onDelete={handleDeleteTask}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {completedTasks.length > 0 && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center gap-3 px-1">
+                        <h3 className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
+                          Completed
+                        </h3>
+                        <div className="h-px bg-border flex-1" />
+                      </div>
+                      <div className="grid gap-3 opacity-80">
+                        {completedTasks.map(task => (
+                          <TaskItem 
+                            key={task.id} 
+                            task={task} 
+                            onToggle={handleToggleTask} 
+                            onDelete={handleDeleteTask}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 px-4 bg-white rounded-3xl border border-dashed border-muted-foreground/20 text-center">
