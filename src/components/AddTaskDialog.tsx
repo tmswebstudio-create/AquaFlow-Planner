@@ -65,11 +65,12 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
       return
     }
 
+    // Construct task data carefully to avoid 'undefined' values for Firestore
     const taskData: any = {
       title: title.trim(),
       date,
       links: links.length > 0 ? links : [],
-      time: time || undefined
+      time: time || "" // Use empty string instead of undefined
     }
 
     if (task && onUpdate) {
