@@ -40,7 +40,6 @@ export function OverallSummary({ tasks }: OverallSummaryProps) {
     } else if (filter === "yearly") {
       start = startOfDay(subYears(now, 1))
     } else {
-      // Custom
       if (!customStart || !customEnd) {
         return { completed: 0, pending: 0, total: 0 }
       }
