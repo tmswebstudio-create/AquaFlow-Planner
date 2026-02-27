@@ -87,7 +87,8 @@ export default function AquaFlowPlanner() {
     if (prefData && prefData[dateKey]) {
       return prefData[dateKey]
     }
-    return { wakeUpTime: "07:00", sleepTime: "22:00" }
+    // Defaulting to 00:00 as requested
+    return { wakeUpTime: "00:00", sleepTime: "00:00" }
   }, [prefData, dateKey])
 
   const tasksRef = useMemoFirebase(() => {
