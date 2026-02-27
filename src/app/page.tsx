@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { format, addDays, isSameDay, subDays, startOfDay } from "date-fns"
+import { format, addDays, isSameDay, subDays } from "date-fns"
 import { 
   useUser, 
   useFirestore, 
@@ -87,7 +87,6 @@ export default function AquaFlowPlanner() {
     if (prefData && prefData[dateKey]) {
       return prefData[dateKey]
     }
-    // Defaulting to 00:00 as requested
     return { wakeUpTime: "00:00", sleepTime: "00:00" }
   }, [prefData, dateKey])
 
@@ -96,7 +95,7 @@ export default function AquaFlowPlanner() {
     return collection(db, "users", user.uid, "tasks")
   }, [db, user])
 
-  const { data: tasksData, isLoading: isTasksLoading } = useCollection<Task>(tasksRef)
+  const { data: tasksData } = useCollection<Task>(tasksRef)
   const tasks = useMemo(() => tasksData || [], [tasksData])
 
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed">) => {
@@ -187,7 +186,11 @@ export default function AquaFlowPlanner() {
           <div className="flex items-center gap-2">
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 md:h-10 md:w-10 text-accent hover:bg-accent/10">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-full h-9 w-9 md:h-10 md:w-10 text-accent hover:bg-accent hover:text-white transition-all duration-200"
+                >
                   <BarChart3 className="h-5 w-5" />
                 </Button>
               </DialogTrigger>
