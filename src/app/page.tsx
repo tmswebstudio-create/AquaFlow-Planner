@@ -236,8 +236,6 @@ export default function AquaFlowPlanner() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
           </div>
         </div>
       </header>
@@ -333,6 +331,9 @@ export default function AquaFlowPlanner() {
                   {isSameDay(selectedDate, new Date()) ? "Today's Flow" : "Daily Planner"}
                 </h2>
                 <p className="text-muted-foreground">Manage your tasks for {format(selectedDate, "EEEE")}.</p>
+              </div>
+              <div>
+                <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
               </div>
             </div>
 
