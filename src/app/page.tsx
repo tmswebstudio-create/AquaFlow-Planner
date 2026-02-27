@@ -17,7 +17,8 @@ import {
   ChevronRight,
   BarChart3,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Plus
 } from "lucide-react"
 import { 
   Dialog, 
@@ -36,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { format, addDays, isSameDay, subDays } from "date-fns"
+import { format, addDays, isSameDay, subDays, startOfDay } from "date-fns"
 import { 
   useUser, 
   useFirestore, 
@@ -61,6 +62,11 @@ export default function AquaFlowPlanner() {
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -94,12 +100,7 @@ export default function AquaFlowPlanner() {
 
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed">) => {
     if (!db || !user) return
-    
-    // Get a reference to a new document with an auto-generated ID
     const newTaskRef = doc(collection(db, "users", user.uid, "tasks"))
-    
-    // Use setDocumentNonBlocking to ensure the 'id' field matches the document ID
-    // as required by the security rules
     setDocumentNonBlocking(newTaskRef, {
       ...taskData,
       id: newTaskRef.id,
@@ -123,8 +124,6 @@ export default function AquaFlowPlanner() {
 
   const handleDeleteTask = (id: string) => {
     if (!db || !user) return
-    const task = tasks.find(t => t.id === id)
-    if (!task) return
     const docRef = doc(db, "users", user.uid, "tasks", id)
     deleteDocumentNonBlocking(docRef)
   }
@@ -139,13 +138,8 @@ export default function AquaFlowPlanner() {
     }, { merge: true })
   }
 
-  const handlePrevWeek = () => {
-    setViewDate(prev => subDays(prev, 7))
-  }
-
-  const handleNextWeek = () => {
-    setViewDate(prev => addDays(prev, 7))
-  }
+  const handlePrevWeek = () => setViewDate(prev => subDays(prev, 7))
+  const handleNextWeek = () => setViewDate(prev => addDays(prev, 7))
 
   const dailyTasks = useMemo(() => {
     return tasks
@@ -162,12 +156,10 @@ export default function AquaFlowPlanner() {
   const completedTasks = useMemo(() => dailyTasks.filter(t => t.completed), [dailyTasks])
 
   const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }).map((_, i) => {
-      return addDays(viewDate, i - 3)
-    })
+    return Array.from({ length: 7 }).map((_, i) => addDays(viewDate, i - 3))
   }, [viewDate])
 
-  if (isUserLoading || !user) {
+  if (!isMounted || isUserLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center gap-4">
@@ -180,25 +172,25 @@ export default function AquaFlowPlanner() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="bg-white border-b sticky top-0 z-10 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
-              <Layout className="text-white h-6 w-6" />
+      <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 px-4 md:px-6 py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="bg-primary p-1.5 md:p-2 rounded-xl shadow-lg shadow-primary/20">
+              <Layout className="text-white h-5 w-5 md:h-6 md:w-6" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-primary">
-              AquaFlow<span className="text-accent">Planner</span>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-primary">
+              AquaFlow<span className="text-accent hidden sm:inline">Planner</span>
             </h1>
           </div>
           
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2">
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-accent hover:text-accent hover:bg-accent/10">
+                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 md:h-10 md:w-10 text-accent hover:bg-accent/10">
                   <BarChart3 className="h-5 w-5" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl bg-white">
+              <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-none shadow-2xl bg-white">
                 <DialogHeader className="sr-only">
                   <DialogTitle>Overall Performance Summary</DialogTitle>
                 </DialogHeader>
@@ -208,8 +200,8 @@ export default function AquaFlowPlanner() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border border-border/50">
-                  <Avatar className="h-10 w-10">
+                <Button variant="ghost" className="h-9 w-9 md:h-10 md:w-10 rounded-full p-0 overflow-hidden border border-border/50">
+                  <Avatar className="h-9 w-9 md:h-10 md:w-10">
                     <AvatarImage src={user.photoURL || ""} alt={user.email || "User"} />
                     <AvatarFallback className="bg-secondary text-primary">
                       {user.email ? user.email.substring(0, 2).toUpperCase() : <UserIcon className="h-4 w-4" />}
@@ -217,13 +209,11 @@ export default function AquaFlowPlanner() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-bold leading-none">Account</p>
-                    <p className="text-xs leading-none text-muted-foreground truncate">
-                      {user.email || "Guest User"}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -240,27 +230,27 @@ export default function AquaFlowPlanner() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8 space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
           
           <div className="lg:col-span-4 space-y-6">
             <DailySettings schedule={currentSchedule} onScheduleChange={handleScheduleChange} />
             
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-muted-foreground flex items-center gap-2 uppercase tracking-wider">
+                <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-2 uppercase tracking-widest">
                   <CalendarIcon className="h-4 w-4" /> Calendar
                 </h3>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handlePrevWeek}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handlePrevWeek}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNextWeek}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNextWeek}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1.5">
                 {weekDays.map((date) => {
                   const isActive = isSameDay(date, selectedDate)
                   const isToday = isSameDay(date, new Date())
@@ -269,48 +259,41 @@ export default function AquaFlowPlanner() {
                       key={date.toISOString()}
                       onClick={() => setSelectedDate(date)}
                       className={cn(
-                        "flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 border",
+                        "flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all border",
                         isActive 
-                          ? "bg-primary text-white border-primary shadow-md scale-110 z-10" 
-                          : "bg-white text-muted-foreground border-transparent hover:border-primary/30",
+                          ? "bg-primary text-white border-primary shadow-md scale-105" 
+                          : "bg-white text-muted-foreground border-transparent hover:border-primary/20",
                         isToday && !isActive && "text-primary font-bold bg-primary/5 border-primary/10"
                       )}
                     >
                       <span className="text-[10px] uppercase font-bold opacity-70">
                         {format(date, "EEE")}
                       </span>
-                      <span className="text-lg font-bold">
+                      <span className="text-base font-bold">
                         {format(date, "d")}
                       </span>
                     </button>
                   )
                 })}
               </div>
-              <p className="text-center text-xs text-muted-foreground italic">
-                Focusing on: {format(selectedDate, "MMMM do, yyyy")}
-              </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-border/50">
-              <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-wider">Daily Summary</h3>
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-border/50 hidden lg:block">
+              <h3 className="text-xs font-bold text-muted-foreground mb-4 uppercase tracking-widest">Daily Progress</h3>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Daily Progress</span>
-                  <span className="text-sm font-bold text-accent">
-                    {dailyTasks.length > 0 
-                      ? Math.round((completedTasks.length / dailyTasks.length) * 100) 
-                      : 0}%
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium">Completion Rate</span>
+                  <span className="font-bold text-accent">
+                    {dailyTasks.length > 0 ? Math.round((completedTasks.length / dailyTasks.length) * 100) : 0}%
                   </span>
                 </div>
-                <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                <div className="h-2.5 w-full bg-secondary rounded-full overflow-hidden">
                    <div 
                     className="h-full bg-accent transition-all duration-500 ease-out" 
-                    style={{ 
-                      width: `${dailyTasks.length > 0 ? (completedTasks.length / dailyTasks.length) * 100 : 0}%` 
-                    }} 
+                    style={{ width: `${dailyTasks.length > 0 ? (completedTasks.length / dailyTasks.length) * 100 : 0}%` }} 
                    />
                 </div>
-                <div className="flex gap-4 pt-2">
+                <div className="flex gap-3 pt-2">
                   <div className="flex-1 bg-accent/5 p-3 rounded-xl border border-accent/10">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold">Done</p>
                     <p className="text-xl font-bold text-accent">{completedTasks.length}</p>
@@ -325,45 +308,39 @@ export default function AquaFlowPlanner() {
           </div>
 
           <div className="lg:col-span-8 space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-extrabold text-foreground flex items-center gap-3">
-                  {isSameDay(selectedDate, new Date()) ? "Today's Flow" : "Daily Planner"}
+                <h2 className="text-2xl md:text-3xl font-extrabold text-foreground">
+                  {isSameDay(selectedDate, new Date()) ? "Today's Flow" : format(selectedDate, "MMMM do")}
                 </h2>
-                <p className="text-muted-foreground">Manage your tasks for {format(selectedDate, "EEEE")}.</p>
+                <p className="text-sm text-muted-foreground">Plan your flow for {format(selectedDate, "EEEE")}.</p>
               </div>
-              <div>
-                <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
-              </div>
+              <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
             </div>
 
             <TimelineView schedule={currentSchedule} tasks={dailyTasks} />
 
-            <div className="space-y-8">
+            <div className="space-y-4">
               {dailyTasks.length > 0 ? (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-8">
-                  {pendingTasks.length > 0 && (
-                    <div className="grid gap-3">
-                      {pendingTasks.map(task => (
-                        <TaskItem 
-                          key={task.id} 
-                          task={task} 
-                          onToggle={handleToggleTask} 
-                          onDelete={handleDeleteTask}
-                        />
-                      ))}
-                    </div>
-                  )}
+                <div className="grid gap-4">
+                  {pendingTasks.map(task => (
+                    <TaskItem 
+                      key={task.id} 
+                      task={task} 
+                      onToggle={handleToggleTask} 
+                      onDelete={handleDeleteTask}
+                    />
+                  ))}
 
                   {completedTasks.length > 0 && (
-                    <div className="space-y-3 pt-2">
+                    <div className="space-y-3 pt-4">
                       <div className="flex items-center gap-3 px-1">
-                        <h3 className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
+                        <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em]">
                           Completed
-                        </h3>
-                        <div className="h-px bg-border flex-1" />
+                        </span>
+                        <div className="h-px bg-border/60 flex-1" />
                       </div>
-                      <div className="grid gap-3 opacity-80">
+                      <div className="grid gap-3 opacity-75">
                         {completedTasks.map(task => (
                           <TaskItem 
                             key={task.id} 
@@ -377,17 +354,14 @@ export default function AquaFlowPlanner() {
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 px-4 bg-white rounded-3xl border border-dashed border-muted-foreground/20 text-center">
-                  <div className="bg-secondary p-4 rounded-full mb-4">
+                <div className="flex flex-col items-center justify-center py-16 px-6 bg-white rounded-3xl border border-dashed border-muted-foreground/20 text-center">
+                  <div className="bg-secondary/50 p-4 rounded-full mb-4">
                     <Layers className="h-8 w-8 text-muted-foreground/40" />
                   </div>
-                  <h3 className="text-lg font-bold text-muted-foreground">No tasks scheduled</h3>
-                  <p className="text-sm text-muted-foreground/60 max-w-[250px] mt-1">
-                    Your flow is empty for this date. Add a new task to get started!
+                  <h3 className="text-lg font-bold text-muted-foreground">Your flow is empty</h3>
+                  <p className="text-sm text-muted-foreground/60 mt-1 max-w-xs">
+                    Start your journey by adding a task for this date.
                   </p>
-                  <div className="mt-6">
-                    <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
-                  </div>
                 </div>
               )}
             </div>
@@ -396,8 +370,8 @@ export default function AquaFlowPlanner() {
         </div>
       </main>
 
-      <footer className="bg-white border-t py-8 px-6 text-center text-muted-foreground">
-        <p className="text-sm">© {new Date().getFullYear()} AquaFlow Planner. Stay in the flow.</p>
+      <footer className="bg-white border-t py-6 px-4 text-center text-xs text-muted-foreground mt-auto">
+        <p>© {new Date().getFullYear()} AquaFlow Planner • Performance Optimized</p>
       </footer>
     </div>
   )

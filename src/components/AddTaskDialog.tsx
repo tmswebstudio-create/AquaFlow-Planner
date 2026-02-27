@@ -36,13 +36,11 @@ export function AddTaskDialog({ onAdd, defaultDate }: AddTaskDialogProps) {
       return
     }
 
-    // Create payload and avoid passing 'undefined' to Firestore
     const taskData: any = {
       title: title.trim(),
       date,
     }
     
-    // Only include optional fields if they have values
     if (link.trim()) taskData.link = link.trim()
     if (time) taskData.time = time
 
@@ -58,8 +56,10 @@ export function AddTaskDialog({ onAdd, defaultDate }: AddTaskDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="rounded-full h-12 px-6 gap-2 shadow-lg shadow-primary/20">
-          <Plus className="h-5 w-5" /> New Task
+        <Button size="sm" className="rounded-full h-10 px-4 md:px-5 gap-1.5 md:gap-2 shadow-lg shadow-primary/20">
+          <Plus className="h-4 w-4 md:h-5 md:w-5" /> 
+          <span className="hidden sm:inline">New Task</span>
+          <span className="sm:hidden">Add</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
@@ -68,7 +68,7 @@ export function AddTaskDialog({ onAdd, defaultDate }: AddTaskDialogProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Task Title *</Label>
+            <Label htmlFor="title" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Task Title *</Label>
             <Input 
               id="title" 
               placeholder="e.g., Quarterly Review Prep" 
@@ -77,42 +77,45 @@ export function AddTaskDialog({ onAdd, defaultDate }: AddTaskDialogProps) {
                 setTitle(e.target.value)
                 if (e.target.value) setError(false)
               }}
-              className={error ? "border-destructive focus-visible:ring-destructive" : ""}
+              className={cn("h-11", error && "border-destructive focus-visible:ring-destructive")}
             />
-            {error && <p className="text-xs text-destructive">Title is required.</p>}
+            {error && <p className="text-[10px] font-bold text-destructive uppercase">Title is required.</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="link">Link (Optional)</Label>
+            <Label htmlFor="link" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Link (Optional)</Label>
             <Input 
               id="link" 
               type="url"
               placeholder="https://example.com" 
               value={link}
               onChange={(e) => setLink(e.target.value)}
+              className="h-11"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Date</Label>
               <Input 
                 id="date" 
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                className="h-11"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time">Time (Optional)</Label>
+              <Label htmlFor="time" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Time</Label>
               <Input 
                 id="time" 
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
+                className="h-11"
               />
             </div>
           </div>
           <DialogFooter className="pt-4">
-            <Button type="submit" className="w-full">Create Task</Button>
+            <Button type="submit" className="w-full h-12 text-base font-bold">Create Task</Button>
           </DialogFooter>
         </form>
       </DialogContent>

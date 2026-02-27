@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Task } from "@/lib/types"
@@ -16,29 +17,29 @@ interface TaskItemProps {
 export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
   return (
     <Card className={cn(
-      "p-4 transition-all duration-300 group hover:shadow-md border-l-4",
-      task.completed ? "opacity-60 border-l-muted bg-muted/30" : "border-l-primary"
+      "p-3 md:p-4 transition-all duration-200 group border-l-4",
+      task.completed ? "opacity-60 border-l-muted bg-muted/20" : "border-l-primary hover:shadow-sm"
     )}>
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 md:gap-4">
         <div className="pt-1">
           <Checkbox 
             checked={task.completed} 
             onCheckedChange={() => onToggle(task.id)}
-            className="h-5 w-5 rounded-full"
+            className="h-5 w-5 rounded-full border-2 transition-colors data-[state=checked]:bg-primary data-[state=checked]:border-primary"
           />
         </div>
         
         <div className="flex-1 min-w-0">
           <h4 className={cn(
-            "text-base font-semibold transition-all duration-300 truncate",
+            "text-sm md:text-base font-semibold transition-all duration-200 leading-tight",
             task.completed && "line-through text-muted-foreground"
           )}>
             {task.title}
           </h4>
           
-          <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[10px] md:text-xs text-muted-foreground">
             {task.time && (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 bg-secondary/50 px-1.5 py-0.5 rounded">
                 <Clock className="h-3 w-3" />
                 {task.time}
               </span>
@@ -48,16 +49,16 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
                 href={task.link} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-primary hover:underline"
+                className="flex items-center gap-1 text-primary hover:underline font-medium"
               >
                 <ExternalLink className="h-3 w-3" />
-                Open Resource
+                Resource
               </a>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center self-center md:self-start gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
           <Button 
             variant="ghost" 
             size="icon" 
