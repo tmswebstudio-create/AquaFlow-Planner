@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Dialog, 
   DialogContent, 
@@ -13,24 +13,38 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, X, Link as LinkIcon } from "lucide-react"
+import { Plus, X, Link as LinkIcon, Pencil } from "lucide-react"
 import { Task, TaskLink } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface AddTaskDialogProps {
-  onAdd: (task: Omit<Task, "id" | "createdAt" | "completed" | "updatedAt" | "ownerId">) => void
+  onAdd?: (task: Omit<Task, "id" | "createdAt" | "completed" | "updatedAt" | "ownerId">) => void
+  onUpdate?: (id: string, updates: Partial<Task>) => void
+  task?: Task
   defaultDate?: string
+  trigger?: React.ReactNode
 }
 
-export function AddTaskDialog({ onAdd, defaultDate }: AddTaskDialogProps) {
+export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: AddTaskDialogProps) {
   const [open, setOpen] = useState(false)
-  const [title, setTitle] = useState("")
-  const [links, setLinks] = useState<TaskLink[]>([])
+  const [title, setTitle] = useState(task?.title || "")
+  const [links, setLinks] = useState<TaskLink[]>(task?.links || [])
   const [newLinkTitle, setNewLinkTitle] = useState("")
   const [newLinkUrl, setNewLinkUrl] = useState("")
-  const [date, setDate] = useState(defaultDate || new Date().toISOString().split("T")[0])
-  const [time, setTime] = useState("")
+  const [date, setDate] = useState(task?.date || defaultDate || new Date().toISOString().split("T")[0])
+  const [time, setTime] = useState(task?.time || "")
   const [error, setError] = useState(false)
+
+  // Reset state when task prop changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setTitle(task?.title || "")
+      setLinks(task?.links || [])
+      setDate(task?.date || defaultDate || new Date().toISOString().split("T")[0])
+      setTime(task?.time || "")
+      setError(false)
+    }
+  }, [open, task, defaultDate])
 
   const handleAddLink = () => {
     if (newLinkTitle.trim() && newLinkUrl.trim()) {
@@ -54,32 +68,33 @@ export function AddTaskDialog({ onAdd, defaultDate }: AddTaskDialogProps) {
     const taskData: any = {
       title: title.trim(),
       date,
-      links: links.length > 0 ? links : undefined,
+      links: links.length > 0 ? links : [],
+      time: time || undefined
+    }
+
+    if (task && onUpdate) {
+      onUpdate(task.id, taskData)
+    } else if (onAdd) {
+      onAdd(taskData)
     }
     
-    if (time) taskData.time = time
-
-    onAdd(taskData)
-    
-    setTitle("")
-    setLinks([])
-    setTime("")
-    setError(false)
     setOpen(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="rounded-full h-10 px-4 md:px-5 gap-1.5 md:gap-2 shadow-lg shadow-primary/20">
-          <Plus className="h-4 w-4 md:h-5 md:w-5" /> 
-          <span className="hidden sm:inline">New Task</span>
-          <span className="sm:hidden">Add</span>
-        </Button>
+        {trigger || (
+          <Button size="sm" className="rounded-full h-10 px-4 md:px-5 gap-1.5 md:gap-2 shadow-lg shadow-primary/20">
+            <Plus className="h-4 w-4 md:h-5 md:w-5" /> 
+            <span className="hidden sm:inline">New Task</span>
+            <span className="sm:hidden">Add</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Task</DialogTitle>
+          <DialogTitle>{task ? "Edit Task" : "Add New Task"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
@@ -173,7 +188,9 @@ export function AddTaskDialog({ onAdd, defaultDate }: AddTaskDialogProps) {
             </div>
           </div>
           <DialogFooter className="pt-4">
-            <Button type="submit" className="w-full h-12 text-base font-bold">Create Task</Button>
+            <Button type="submit" className="w-full h-12 text-base font-bold">
+              {task ? "Save Changes" : "Create Task"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

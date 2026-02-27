@@ -5,16 +5,18 @@ import { Task } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Clock, Trash2 } from "lucide-react"
+import { ExternalLink, Clock, Trash2, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { AddTaskDialog } from "./AddTaskDialog"
 
 interface TaskItemProps {
   task: Task
   onToggle: (id: string) => void
   onDelete: (id: string) => void
+  onUpdate: (id: string, updates: Partial<Task>) => void
 }
 
-export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
+export function TaskItem({ task, onToggle, onDelete, onUpdate }: TaskItemProps) {
   return (
     <Card className={cn(
       "p-3 md:p-4 transition-all duration-200 group border-l-4",
@@ -65,6 +67,19 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
         </div>
 
         <div className="flex items-center self-center md:self-start gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <AddTaskDialog 
+            task={task} 
+            onUpdate={onUpdate}
+            trigger={
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            }
+          />
           <Button 
             variant="ghost" 
             size="icon" 

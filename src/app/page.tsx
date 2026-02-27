@@ -110,6 +110,15 @@ export default function AquaFlowPlanner() {
     }, { merge: true })
   }
 
+  const handleEditTask = (id: string, updates: Partial<Task>) => {
+    if (!db || !user) return
+    const docRef = doc(db, "users", user.uid, "tasks", id)
+    updateDocumentNonBlocking(docRef, { 
+      ...updates,
+      updatedAt: Date.now()
+    })
+  }
+
   const handleToggleTask = (id: string) => {
     if (!db || !user) return
     const task = tasks.find(t => t.id === id)
@@ -332,6 +341,7 @@ export default function AquaFlowPlanner() {
                       task={task} 
                       onToggle={handleToggleTask} 
                       onDelete={handleDeleteTask}
+                      onUpdate={handleEditTask}
                     />
                   ))}
 
@@ -350,6 +360,7 @@ export default function AquaFlowPlanner() {
                             task={task} 
                             onToggle={handleToggleTask} 
                             onDelete={handleDeleteTask}
+                            onUpdate={handleEditTask}
                           />
                         ))}
                       </div>
