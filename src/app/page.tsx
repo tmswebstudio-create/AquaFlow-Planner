@@ -121,6 +121,9 @@ export default function AquaFlowPlanner() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none bg-transparent shadow-none">
+                <DialogHeader className="sr-only">
+                  <DialogTitle>Overall Performance Summary</DialogTitle>
+                </DialogHeader>
                 <OverallSummary tasks={tasks} />
               </DialogContent>
             </Dialog>
