@@ -25,6 +25,15 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { format, addDays, isSameDay, subDays } from "date-fns"
 import { 
@@ -61,7 +70,6 @@ export default function AquaFlowPlanner() {
 
   const dateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
 
-  // Preferences Firestore reference
   const prefRef = useMemoFirebase(() => {
     if (!db || !user) return null
     return doc(db, "users", user.uid, "preferences", "profile")
@@ -69,7 +77,6 @@ export default function AquaFlowPlanner() {
   
   const { data: prefData } = useDoc<DailySchedule & { [key: string]: DailySchedule }>(prefRef)
 
-  // Get schedule for selected date (supporting the new per-day storage request)
   const currentSchedule = useMemo(() => {
     if (prefData && prefData[dateKey]) {
       return prefData[dateKey]
@@ -77,7 +84,6 @@ export default function AquaFlowPlanner() {
     return { wakeUpTime: "07:00", sleepTime: "22:00" }
   }, [prefData, dateKey])
 
-  // Tasks Firestore reference
   const tasksRef = useMemoFirebase(() => {
     if (!db || !user) return null
     return collection(db, "users", user.uid, "tasks")
@@ -110,6 +116,8 @@ export default function AquaFlowPlanner() {
 
   const handleDeleteTask = (id: string) => {
     if (!db || !user) return
+    const task = tasks.find(t => t.id === id)
+    if (!task) return
     const docRef = doc(db, "users", user.uid, "tasks", id)
     deleteDocumentNonBlocking(docRef)
   }
@@ -119,7 +127,6 @@ export default function AquaFlowPlanner() {
     setDocumentNonBlocking(prefRef, {
       id: "profile",
       [dateKey]: newSchedule,
-      // For backward compatibility or default view
       wakeUpTime: newSchedule.wakeUpTime,
       sleepTime: newSchedule.sleepTime
     }, { merge: true })
@@ -192,19 +199,36 @@ export default function AquaFlowPlanner() {
               </DialogContent>
             </Dialog>
 
-            <div className="h-10 px-3 flex items-center gap-2 bg-secondary/50 rounded-full text-xs font-bold text-muted-foreground">
-              <UserIcon className="h-4 w-4" />
-              <span className="max-w-[100px] truncate">{user.email || "Guest"}</span>
-            </div>
-
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full h-10 w-10 text-destructive hover:bg-destructive/10"
-              onClick={() => auth.signOut()}
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border border-border/50">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user.photoURL || ""} alt={user.email || "User"} />
+                    <AvatarFallback className="bg-secondary text-primary">
+                      {user.email ? user.email.substring(0, 2).toUpperCase() : <UserIcon className="h-4 w-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-bold leading-none">Account</p>
+                    <p className="text-xs leading-none text-muted-foreground truncate">
+                      {user.email || "Guest User"}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                  onClick={() => auth.signOut()}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
           </div>
