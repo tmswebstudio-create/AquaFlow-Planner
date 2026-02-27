@@ -53,6 +53,23 @@ import {
 } from "@/firebase/non-blocking-updates"
 import { useRouter } from "next/navigation"
 
+// DND Kit Imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+
 export default function AquaFlowPlanner() {
   const { user, isUserLoading } = useUser()
   const db = useFirestore()
@@ -62,6 +79,17 @@ export default function AquaFlowPlanner() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
   const [isMounted, setIsMounted] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     setIsMounted(true)
@@ -97,6 +125,20 @@ export default function AquaFlowPlanner() {
   const { data: tasksData } = useCollection<Task>(tasksRef)
   const tasks = useMemo(() => tasksData || [], [tasksData])
 
+  const dailyTasks = useMemo(() => {
+    return tasks
+      .filter(t => t.date === dateKey)
+      .sort((a, b) => {
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
+        }
+        if (a.time && b.time) return a.time.localeCompare(b.time)
+        if (a.time) return -1
+        if (b.time) return 1
+        return (a.createdAt || 0) - (b.createdAt || 0)
+      })
+  }, [tasks, dateKey])
+
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed" | "updatedAt" | "ownerId">) => {
     if (!db || !user) return
     const newTaskRef = doc(collection(db, "users", user.uid, "tasks"))
@@ -105,6 +147,7 @@ export default function AquaFlowPlanner() {
       id: newTaskRef.id,
       completed: false,
       ownerId: user.uid,
+      order: dailyTasks.length,
       createdAt: Date.now(),
       updatedAt: Date.now()
     }, { merge: true })
@@ -136,6 +179,22 @@ export default function AquaFlowPlanner() {
     deleteDocumentNonBlocking(docRef)
   }
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id && user) {
+      const oldIndex = dailyTasks.findIndex((t) => t.id === active.id);
+      const newIndex = dailyTasks.findIndex((t) => t.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reordered = arrayMove(dailyTasks, oldIndex, newIndex);
+        reordered.forEach((task, index) => {
+          const docRef = doc(db, "users", user.uid, "tasks", task.id);
+          updateDocumentNonBlocking(docRef, { order: index });
+        });
+      }
+    }
+  };
+
   const handleScheduleChange = (newSchedule: DailySchedule) => {
     if (!prefRef || !user) return
     setDocumentNonBlocking(prefRef, {
@@ -148,17 +207,6 @@ export default function AquaFlowPlanner() {
 
   const handlePrevWeek = () => setViewDate(prev => subDays(prev, 7))
   const handleNextWeek = () => setViewDate(prev => addDays(prev, 7))
-
-  const dailyTasks = useMemo(() => {
-    return tasks
-      .filter(t => t.date === dateKey)
-      .sort((a, b) => {
-        if (a.time && b.time) return a.time.localeCompare(b.time)
-        if (a.time) return -1
-        if (b.time) return 1
-        return (a.createdAt || 0) - (b.createdAt || 0)
-      })
-  }, [tasks, dateKey])
 
   const pendingTasks = useMemo(() => dailyTasks.filter(t => !t.completed), [dailyTasks])
   const completedTasks = useMemo(() => dailyTasks.filter(t => t.completed), [dailyTasks])
@@ -333,51 +381,67 @@ export default function AquaFlowPlanner() {
             <TimelineView schedule={currentSchedule} tasks={dailyTasks} />
 
             <div className="space-y-4">
-              {dailyTasks.length > 0 ? (
-                <div className="grid gap-4">
-                  {pendingTasks.map(task => (
-                    <TaskItem 
-                      key={task.id} 
-                      task={task} 
-                      onToggle={handleToggleTask} 
-                      onDelete={handleDeleteTask}
-                      onUpdate={handleEditTask}
-                    />
-                  ))}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                {dailyTasks.length > 0 ? (
+                  <div className="grid gap-4">
+                    <SortableContext
+                      items={dailyTasks.map(t => t.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {pendingTasks.map(task => (
+                        <TaskItem 
+                          key={task.id} 
+                          task={task} 
+                          onToggle={handleToggleTask} 
+                          onDelete={handleDeleteTask}
+                          onUpdate={handleEditTask}
+                        />
+                      ))}
+                    </SortableContext>
 
-                  {completedTasks.length > 0 && (
-                    <div className="space-y-3 pt-4">
-                      <div className="flex items-center gap-3 px-1">
-                        <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em]">
-                          Completed
-                        </span>
-                        <div className="h-px bg-border/60 flex-1" />
+                    {completedTasks.length > 0 && (
+                      <div className="space-y-3 pt-4">
+                        <div className="flex items-center gap-3 px-1">
+                          <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em]">
+                            Completed
+                          </span>
+                          <div className="h-px bg-border/60 flex-1" />
+                        </div>
+                        <div className="grid gap-3 opacity-75">
+                          <SortableContext
+                            items={completedTasks.map(t => t.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {completedTasks.map(task => (
+                              <TaskItem 
+                                key={task.id} 
+                                task={task} 
+                                onToggle={handleToggleTask} 
+                                onDelete={handleDeleteTask}
+                                onUpdate={handleEditTask}
+                              />
+                            ))}
+                          </SortableContext>
+                        </div>
                       </div>
-                      <div className="grid gap-3 opacity-75">
-                        {completedTasks.map(task => (
-                          <TaskItem 
-                            key={task.id} 
-                            task={task} 
-                            onToggle={handleToggleTask} 
-                            onDelete={handleDeleteTask}
-                            onUpdate={handleEditTask}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 px-6 bg-white rounded-3xl border border-dashed border-muted-foreground/20 text-center">
-                  <div className="bg-secondary/50 p-4 rounded-full mb-4">
-                    <Layers className="h-8 w-8 text-muted-foreground/40" />
+                    )}
                   </div>
-                  <h3 className="text-lg font-bold text-muted-foreground">Your flow is empty</h3>
-                  <p className="text-sm text-muted-foreground/60 mt-1 max-w-xs">
-                    Start your journey by adding a task for this date.
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 px-6 bg-white rounded-3xl border border-dashed border-muted-foreground/20 text-center">
+                    <div className="bg-secondary/50 p-4 rounded-full mb-4">
+                      <Layers className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                    <h3 className="text-lg font-bold text-muted-foreground">Your flow is empty</h3>
+                    <p className="text-sm text-muted-foreground/60 mt-1 max-w-xs">
+                      Start your journey by adding a task for this date.
+                    </p>
+                  </div>
+                )}
+              </DndContext>
             </div>
           </div>
 

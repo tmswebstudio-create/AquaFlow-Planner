@@ -14,6 +14,7 @@ export interface Task {
   createdAt: number;
   updatedAt: number;
   ownerId: string;
+  order?: number;
 }
 
 export interface DailySchedule {
