@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Plus } from "lucide-react"
 import { Task } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 interface AddTaskDialogProps {
   onAdd: (task: Omit<Task, "id" | "createdAt" | "completed">) => void
