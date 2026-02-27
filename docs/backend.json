@@ -1,0 +1,131 @@
+{
+  "entities": {
+    "UserPreferences": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserPreferences",
+      "type": "object",
+      "description": "Stores user-specific settings and preferences, such as daily wake-up and sleep times, which define the active schedule for the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserPreferences entity."
+        },
+        "wakeUpTime": {
+          "type": "string",
+          "description": "The time of day the user typically wakes up, defining the start of their active schedule.",
+          "format": "time"
+        },
+        "sleepTime": {
+          "type": "string",
+          "description": "The time of day the user typically goes to sleep, defining the end of their active schedule.",
+          "format": "time"
+        }
+      },
+      "required": [
+        "id",
+        "wakeUpTime",
+        "sleepTime"
+      ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents an individual task with details like title, link, scheduled date and time, and completion status.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Task entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The main title or description of the task."
+        },
+        "link": {
+          "type": "string",
+          "description": "An optional URL associated with the task, which can be opened directly.",
+          "format": "uri"
+        },
+        "date": {
+          "type": "string",
+          "description": "The specific date the task is scheduled for.",
+          "format": "date"
+        },
+        "time": {
+          "type": "string",
+          "description": "The optional specific time of day the task is scheduled for.",
+          "format": "time"
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "A boolean flag indicating whether the task has been marked as completed."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the task was originally created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the task was last updated or modified.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "date",
+        "completed",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/preferences/profile",
+        "definition": {
+          "entityName": "UserPreferences",
+          "schema": {
+            "$ref": "#/backend/entities/UserPreferences"
+          },
+          "description": "Stores user-specific settings and preferences, such as daily wake-up and sleep times. This is a singleton document for each user, identified by 'profile' as its document ID. The ownership is implicitly tied to the '{userId}' in the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns these preferences. Matches Firebase Authentication's request.auth.uid."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Represents an individual task belonging to a specific user. Each document includes a denormalized 'ownerId' field, which matches the '{userId}' from the path, ensuring authorization independence and explicit ownership within the document itself.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this task. Matches Firebase Authentication's request.auth.uid."
+            },
+            {
+              "name": "taskId",
+              "description": "The unique identifier for the individual task document."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure is designed to adhere strictly to the core design principles and strategy mandates, prioritizing authorization independence, clarity, and scalability. All data is structured under a top-level `/users/{userId}` collection to establish clear, path-based ownership, a cornerstone for secure and debuggable rules.\n\n**Authorization Independence via Denormalization:**\n\n1.  **UserPreferences:** Stored as a singleton document at `/users/{userId}/preferences/profile`. The `userId` embedded directly in the path `/users/{userId}` explicitly defines the owner of these preferences. Since it's a direct child of the user's root, there's no need for `get()` calls to any parent document for authorization. The document itself (named `profile`) is intrinsically linked to `userId`.\n2.  **Tasks:** Stored in a subcollection at `/users/{userId}/tasks/{taskId}`. Similar to UserPreferences, the `userId` in the path immediately identifies the owner. To reinforce authorization independence and adhere to the mandate, each `Task` document will include a denormalized `ownerId` field (matching the `userId` from its path). This means that security rules evaluating a `Task` document will not need to perform a `get()` call to its parent collection or the user document to determine ownership; the `ownerId` field within the `Task` document itself, in combination with the `userId` from the request path, provides all necessary authorization context. This structure enables atomic operations (e.g., creating a task) without needing to check parent data.\n\n**QAPs (Query/Access Patterns) Support:**\n\nThe hierarchical, user-centric structure (`/users/{userId}/...`) intrinsically supports secure `list` operations by making rules that are not filters:\n\n*   For `UserPreferences` (a singleton): A `get` rule like `allow read, write: if request.auth.uid == userId;` is straightforward. `list` operations are not applicable here.\n*   For `Tasks` (`/users/{userId}/tasks`): A `list` rule like `allow list: if request.auth.uid == userId;` is highly efficient and secure. This rule ensures that a user can only query and retrieve tasks from *their own* `/users/{userId}/tasks` subcollection. Firestore rules are evaluated *before* the query is executed. Therefore, any `list` query attempted by `request.auth.uid` on `/users/{otherUserId}/tasks` would be denied outright by the `userId` path segment check, preventing the execution of unauthorized queries. This fully satisfies the QAP principle by enabling secure list operations where the authorization check is performed structurally, rather than relying on inefficient and insecure post-query filtering.\n\n**DBAC Implementation:**\n\nAuthorization relies solely on `request.auth.uid`. User roles or permissions (though not explicitly required for this personal task manager) would be stored as data in the database (e.g., in a dedicated `roles_admin/{uid}` collection or a `role` field in the user document, denormalized where necessary), not via custom claims, adhering to the DBAC principle.\n\nThis design ensures that security rules are simple, explicit, and easy to debug, leveraging the structure to enforce access control."
+  }
+}

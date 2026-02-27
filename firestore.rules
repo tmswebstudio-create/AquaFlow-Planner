@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * Core Philosophy: 
+     * This ruleset enforces a strict User-Ownership model. All application data is 
+     * organized hierarchically under a specific user's root document (/users/{userId}), 
+     * ensuring that users can only access and modify their own personal data.
+     *
+     * Data Structure:
+     * - User settings are stored as a singleton 'profile' document within a user's subcollection.
+     * - Tasks are stored in a dedicated subcollection for each user.
+     *
+     * Key Security Decisions:
+     * - Strict Path-Based Authorization: The {userId} in the document path is the primary 
+     *   source of truth for ownership, cross-referenced with the authenticated user's UID.
+     * - Relational Denormalization: Task documents include an 'ownerId' field to allow for 
+     *   future-proofing and to satisfy requirements for explicit ownership within the document.
+     * - Existence Checks: All update and delete operations require the document to exist 
+     *   and belong to the requester.
+     * - Prototyping Flexibility: While authorization is strictly enforced, specific data 
+     *   field types (strings, booleans, dates) are not validated to allow for rapid frontend iteration.
+     */
+
+    // --- HELPER FUNCTIONS ---
+
+    /** @description Checks if the request is made by an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** @description Checks if the authenticated user's UID matches the provided userId from the path. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** @description Checks if a document exists and belongs to the authenticated user. Used for updates/deletes. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for the UserPreferences singleton document.
+     * @path /users/{userId}/preferences/profile
+     * @allow (get) If the user is authenticated and matches the {userId} in the path.
+     * @deny (create) If the document ID is not 'profile' or the user is not the owner.
+     * @principle Restricts access to a user's own settings tree and enforces singleton document naming.
+     */
+    match /users/{userId}/preferences/profile {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == "profile";
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for individual Task documents.
+     * @path /users/{userId}/tasks/{taskId}
+     * @allow (list) If querying the authenticated user's own tasks collection.
+     * @deny (update) If attempting to change the 'ownerId' or 'id' of an existing task.
+     * @principle Enforces document ownership for all CRUD operations and maintains relational integrity.
+     */
+    match /users/{userId}/tasks/{taskId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == taskId && request.resource.data.ownerId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    // --- GLOBAL DENY ---
+    // Explicitly deny access to any other paths or unspecified operations.
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
