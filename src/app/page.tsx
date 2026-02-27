@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { useLocalStorage } from "@/hooks/use-local-storage"
 import { Task, DailySchedule } from "@/lib/types"
 import { DailySettings } from "@/components/DailySettings"
 import { AddTaskDialog } from "@/components/AddTaskDialog"
@@ -15,7 +14,9 @@ import {
   Layout, 
   ChevronLeft, 
   ChevronRight,
-  BarChart3
+  BarChart3,
+  LogOut,
+  User as UserIcon
 } from "lucide-react"
 import { 
   Dialog, 
@@ -26,48 +27,102 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { format, addDays, isSameDay, subDays } from "date-fns"
+import { 
+  useUser, 
+  useFirestore, 
+  useCollection, 
+  useDoc, 
+  useMemoFirebase,
+  useAuth 
+} from "@/firebase"
+import { collection, doc } from "firebase/firestore"
+import { 
+  addDocumentNonBlocking, 
+  updateDocumentNonBlocking, 
+  deleteDocumentNonBlocking,
+  setDocumentNonBlocking 
+} from "@/firebase/non-blocking-updates"
+import { useRouter } from "next/navigation"
 
 export default function AquaFlowPlanner() {
-  const [isClient, setIsClient] = useState(false)
-  const [tasks, setTasks] = useLocalStorage<Task[]>("aquaflow_tasks", [])
-  const [schedules, setSchedules] = useLocalStorage<Record<string, DailySchedule>>("aquaflow_schedules", {})
+  const { user, isUserLoading } = useUser()
+  const db = useFirestore()
+  const auth = useAuth()
+  const router = useRouter()
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
 
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    if (!isUserLoading && !user) {
+      router.push("/login")
+    }
+  }, [user, isUserLoading, router])
 
   const dateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
 
+  // Preferences Firestore reference
+  const prefRef = useMemoFirebase(() => {
+    if (!db || !user) return null
+    return doc(db, "users", user.uid, "preferences", "profile")
+  }, [db, user])
+  
+  const { data: prefData } = useDoc<DailySchedule & { [key: string]: DailySchedule }>(prefRef)
+
+  // Get schedule for selected date (supporting the new per-day storage request)
   const currentSchedule = useMemo(() => {
-    return schedules[dateKey] || { wakeUpTime: "07:00", sleepTime: "22:00" }
-  }, [schedules, dateKey])
+    if (prefData && prefData[dateKey]) {
+      return prefData[dateKey]
+    }
+    return { wakeUpTime: "07:00", sleepTime: "22:00" }
+  }, [prefData, dateKey])
+
+  // Tasks Firestore reference
+  const tasksRef = useMemoFirebase(() => {
+    if (!db || !user) return null
+    return collection(db, "users", user.uid, "tasks")
+  }, [db, user])
+
+  const { data: tasksData, isLoading: isTasksLoading } = useCollection<Task>(tasksRef)
+  const tasks = useMemo(() => tasksData || [], [tasksData])
 
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed">) => {
-    const newTask: Task = {
+    if (!tasksRef || !user) return
+    addDocumentNonBlocking(tasksRef, {
       ...taskData,
-      id: crypto.randomUUID(),
       completed: false,
-      createdAt: Date.now()
-    }
-    setTasks([...tasks, newTask])
+      ownerId: user.uid,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    })
   }
 
   const handleToggleTask = (id: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t))
+    if (!db || !user) return
+    const task = tasks.find(t => t.id === id)
+    if (!task) return
+    const docRef = doc(db, "users", user.uid, "tasks", id)
+    updateDocumentNonBlocking(docRef, { 
+      completed: !task.completed,
+      updatedAt: Date.now()
+    })
   }
 
   const handleDeleteTask = (id: string) => {
-    setTasks(tasks.filter(t => t.id !== id))
+    if (!db || !user) return
+    const docRef = doc(db, "users", user.uid, "tasks", id)
+    deleteDocumentNonBlocking(docRef)
   }
 
   const handleScheduleChange = (newSchedule: DailySchedule) => {
-    setSchedules(prev => ({
-      ...prev,
-      [dateKey]: newSchedule
-    }))
+    if (!prefRef || !user) return
+    setDocumentNonBlocking(prefRef, {
+      id: "profile",
+      [dateKey]: newSchedule,
+      // For backward compatibility or default view
+      wakeUpTime: newSchedule.wakeUpTime,
+      sleepTime: newSchedule.sleepTime
+    }, { merge: true })
   }
 
   const handlePrevWeek = () => {
@@ -85,7 +140,7 @@ export default function AquaFlowPlanner() {
         if (a.time && b.time) return a.time.localeCompare(b.time)
         if (a.time) return -1
         if (b.time) return 1
-        return a.createdAt - b.createdAt
+        return (a.createdAt || 0) - (b.createdAt || 0)
       })
   }, [tasks, dateKey])
 
@@ -98,7 +153,16 @@ export default function AquaFlowPlanner() {
     })
   }, [viewDate])
 
-  if (!isClient) return null
+  if (isUserLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <Layout className="h-12 w-12 text-primary/20" />
+          <p className="text-muted-foreground text-sm font-medium">Flowing...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -120,13 +184,28 @@ export default function AquaFlowPlanner() {
                   <BarChart3 className="h-5 w-5" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl">
+              <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl bg-white">
                 <DialogHeader className="sr-only">
                   <DialogTitle>Overall Performance Summary</DialogTitle>
                 </DialogHeader>
                 <OverallSummary tasks={tasks} />
               </DialogContent>
             </Dialog>
+
+            <div className="h-10 px-3 flex items-center gap-2 bg-secondary/50 rounded-full text-xs font-bold text-muted-foreground">
+              <UserIcon className="h-4 w-4" />
+              <span className="max-w-[100px] truncate">{user.email || "Guest"}</span>
+            </div>
+
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full h-10 w-10 text-destructive hover:bg-destructive/10"
+              onClick={() => auth.signOut()}
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+
             <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
           </div>
         </div>
