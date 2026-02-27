@@ -37,23 +37,29 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
             {task.title}
           </h4>
           
-          <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[10px] md:text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-2 text-[10px] md:text-xs text-muted-foreground">
             {task.time && (
               <span className="flex items-center gap-1 bg-secondary/50 px-1.5 py-0.5 rounded">
                 <Clock className="h-3 w-3" />
                 {task.time}
               </span>
             )}
-            {task.link && (
-              <a 
-                href={task.link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-primary hover:underline font-medium"
-              >
-                <ExternalLink className="h-3 w-3" />
-                Resource
-              </a>
+            
+            {task.links && task.links.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {task.links.map((link, idx) => (
+                  <a 
+                    key={idx}
+                    href={link.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-primary hover:underline font-medium bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 transition-colors hover:bg-primary/10"
+                  >
+                    <ExternalLink className="h-2.5 w-2.5" />
+                    {link.title}
+                  </a>
+                ))}
+              </div>
             )}
           </div>
         </div>

@@ -17,8 +17,7 @@ import {
   ChevronRight,
   BarChart3,
   LogOut,
-  User as UserIcon,
-  Plus
+  User as UserIcon
 } from "lucide-react"
 import { 
   Dialog, 
@@ -98,7 +97,7 @@ export default function AquaFlowPlanner() {
   const { data: tasksData } = useCollection<Task>(tasksRef)
   const tasks = useMemo(() => tasksData || [], [tasksData])
 
-  const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed">) => {
+  const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed" | "updatedAt" | "ownerId">) => {
     if (!db || !user) return
     const newTaskRef = doc(collection(db, "users", user.uid, "tasks"))
     setDocumentNonBlocking(newTaskRef, {
