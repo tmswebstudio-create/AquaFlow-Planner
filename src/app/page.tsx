@@ -120,7 +120,7 @@ export default function AquaFlowPlanner() {
                   <BarChart3 className="h-5 w-5" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none bg-transparent shadow-none">
+              <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl">
                 <DialogHeader className="sr-only">
                   <DialogTitle>Overall Performance Summary</DialogTitle>
                 </DialogHeader>
