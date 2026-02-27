@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -34,12 +35,19 @@ export function AddTaskDialog({ onAdd, defaultDate }: AddTaskDialogProps) {
       setError(true)
       return
     }
-    onAdd({
-      title,
-      link: link || undefined,
+
+    // Create payload and avoid passing 'undefined' to Firestore
+    const taskData: any = {
+      title: title.trim(),
       date,
-      time: time || undefined
-    })
+    }
+    
+    // Only include optional fields if they have values
+    if (link.trim()) taskData.link = link.trim()
+    if (time) taskData.time = time
+
+    onAdd(taskData)
+    
     setTitle("")
     setLink("")
     setTime("")

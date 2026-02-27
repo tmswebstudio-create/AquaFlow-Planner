@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -46,7 +47,6 @@ import {
 } from "@/firebase"
 import { collection, doc } from "firebase/firestore"
 import { 
-  addDocumentNonBlocking, 
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking,
   setDocumentNonBlocking 
@@ -93,14 +93,21 @@ export default function AquaFlowPlanner() {
   const tasks = useMemo(() => tasksData || [], [tasksData])
 
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed">) => {
-    if (!tasksRef || !user) return
-    addDocumentNonBlocking(tasksRef, {
+    if (!db || !user) return
+    
+    // Get a reference to a new document with an auto-generated ID
+    const newTaskRef = doc(collection(db, "users", user.uid, "tasks"))
+    
+    // Use setDocumentNonBlocking to ensure the 'id' field matches the document ID
+    // as required by the security rules
+    setDocumentNonBlocking(newTaskRef, {
       ...taskData,
+      id: newTaskRef.id,
       completed: false,
       ownerId: user.uid,
       createdAt: Date.now(),
       updatedAt: Date.now()
-    })
+    }, { merge: true })
   }
 
   const handleToggleTask = (id: string) => {
