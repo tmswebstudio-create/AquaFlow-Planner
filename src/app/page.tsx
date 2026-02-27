@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -8,6 +7,7 @@ import { DailySettings } from "@/components/DailySettings"
 import { AddTaskDialog } from "@/components/AddTaskDialog"
 import { TaskItem } from "@/components/TaskItem"
 import { TimelineView } from "@/components/TimelineView"
+import { OverallSummary } from "@/components/OverallSummary"
 import { Button } from "@/components/ui/button"
 import { Calendar as CalendarIcon, Layers, Layout, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -187,6 +187,8 @@ export default function AquaFlowPlanner() {
                 </div>
               </div>
             </div>
+
+            <OverallSummary tasks={tasks} />
           </div>
 
           <div className="lg:col-span-8 space-y-6">
