@@ -157,7 +157,7 @@ export default function AquaFlowPlanner() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-border/50">
-              <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-wider">Summary</h3>
+              <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-wider">Daily Summary</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Daily Progress</span>
