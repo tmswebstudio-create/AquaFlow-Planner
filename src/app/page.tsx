@@ -9,7 +9,21 @@ import { TaskItem } from "@/components/TaskItem"
 import { TimelineView } from "@/components/TimelineView"
 import { OverallSummary } from "@/components/OverallSummary"
 import { Button } from "@/components/ui/button"
-import { Calendar as CalendarIcon, Layers, Layout, ChevronLeft, ChevronRight } from "lucide-react"
+import { 
+  Calendar as CalendarIcon, 
+  Layers, 
+  Layout, 
+  ChevronLeft, 
+  ChevronRight,
+  BarChart3
+} from "lucide-react"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { format, addDays, isSameDay, subDays } from "date-fns"
 
@@ -99,7 +113,17 @@ export default function AquaFlowPlanner() {
             </h1>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-accent hover:text-accent hover:bg-accent/10">
+                  <BarChart3 className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none bg-transparent shadow-none">
+                <OverallSummary tasks={tasks} />
+              </DialogContent>
+            </Dialog>
             <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
           </div>
         </div>
@@ -157,7 +181,7 @@ export default function AquaFlowPlanner() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-border/50">
-              <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-wider">Daily Summary</h3>
+              <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-wider">Daily Progress</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Daily Progress</span>
@@ -187,8 +211,6 @@ export default function AquaFlowPlanner() {
                 </div>
               </div>
             </div>
-
-            <OverallSummary tasks={tasks} />
           </div>
 
           <div className="lg:col-span-8 space-y-6">

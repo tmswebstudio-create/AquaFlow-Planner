@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { TrendingUp, BarChart3 } from "lucide-react"
+import { TrendingUp } from "lucide-react"
 import { 
   subDays, 
   subMonths, 
@@ -76,17 +76,17 @@ export function OverallSummary({ tasks }: OverallSummaryProps) {
     : 0
 
   return (
-    <Card className="border-none shadow-sm bg-accent/5 overflow-hidden">
+    <Card className="border-none shadow-none bg-accent/5 overflow-hidden rounded-none sm:rounded-2xl">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-bold flex items-center gap-2 text-accent uppercase tracking-wider">
-          <TrendingUp className="h-4 w-4" /> Overall Performance
+        <CardTitle className="text-lg font-bold flex items-center gap-2 text-accent uppercase tracking-wider">
+          <TrendingUp className="h-5 w-5" /> Overall Performance
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label className="text-[10px] uppercase font-bold text-muted-foreground">Range Filter</Label>
           <Select value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-            <SelectTrigger className="h-9 bg-background/50 border-none shadow-none focus:ring-accent/20">
+            <SelectTrigger className="h-10 bg-background/50 border-none shadow-none focus:ring-accent/20">
               <SelectValue placeholder="Select Range" />
             </SelectTrigger>
             <SelectContent>
@@ -99,14 +99,14 @@ export function OverallSummary({ tasks }: OverallSummaryProps) {
         </div>
 
         {filter === "custom" && (
-          <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
             <div className="space-y-1">
               <Label className="text-[9px] uppercase text-muted-foreground">Start Date</Label>
               <Input 
                 type="date" 
                 value={customStart} 
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="h-8 text-xs bg-background/50 border-none focus-visible:ring-accent/20"
+                className="h-9 text-sm bg-background/50 border-none focus-visible:ring-accent/20"
               />
             </div>
             <div className="space-y-1">
@@ -115,33 +115,33 @@ export function OverallSummary({ tasks }: OverallSummaryProps) {
                 type="date" 
                 value={customEnd} 
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="h-8 text-xs bg-background/50 border-none focus-visible:ring-accent/20"
+                className="h-9 text-sm bg-background/50 border-none focus-visible:ring-accent/20"
               />
             </div>
           </div>
         )}
 
-        <div className="pt-2 space-y-4">
+        <div className="pt-2 space-y-5">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-bold text-muted-foreground">Total Completion</span>
-            <span className="text-lg font-black text-accent">{progress}%</span>
+            <span className="text-sm font-bold text-muted-foreground">Total Completion</span>
+            <span className="text-2xl font-black text-accent">{progress}%</span>
           </div>
           
-          <div className="h-2 w-full bg-accent/10 rounded-full overflow-hidden">
+          <div className="h-3 w-full bg-accent/10 rounded-full overflow-hidden">
              <div 
               className="h-full bg-accent transition-all duration-700 ease-out" 
               style={{ width: `${progress}%` }} 
              />
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <div className="bg-background/80 p-3 rounded-xl border border-accent/5 shadow-sm">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-background/80 p-4 rounded-xl border border-accent/5 shadow-sm">
               <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Total Done</p>
-              <p className="text-2xl font-black text-accent">{filteredStats.completed}</p>
+              <p className="text-3xl font-black text-accent">{filteredStats.completed}</p>
             </div>
-            <div className="bg-background/80 p-3 rounded-xl border border-primary/5 shadow-sm">
+            <div className="bg-background/80 p-4 rounded-xl border border-primary/5 shadow-sm">
               <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Total Pending</p>
-              <p className="text-2xl font-black text-primary">{filteredStats.pending}</p>
+              <p className="text-3xl font-black text-primary">{filteredStats.pending}</p>
             </div>
           </div>
         </div>
