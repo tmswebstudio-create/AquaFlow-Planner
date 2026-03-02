@@ -13,8 +13,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, X, Link as LinkIcon, Pencil } from "lucide-react"
-import { Task, TaskLink } from "@/lib/types"
+import { Plus, X, Link as LinkIcon, CheckCircle2 } from "lucide-react"
+import { Task, TaskLink, SubTask } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface AddTaskDialogProps {
@@ -29,17 +29,19 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState(task?.title || "")
   const [links, setLinks] = useState<TaskLink[]>(task?.links || [])
+  const [subtasks, setSubtasks] = useState<SubTask[]>(task?.subtasks || [])
   const [newLinkTitle, setNewLinkTitle] = useState("")
   const [newLinkUrl, setNewLinkUrl] = useState("")
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("")
   const [date, setDate] = useState(task?.date || defaultDate || new Date().toISOString().split("T")[0])
   const [time, setTime] = useState(task?.time || "")
   const [error, setError] = useState(false)
 
-  // Reset state when task prop changes or dialog opens
   useEffect(() => {
     if (open) {
       setTitle(task?.title || "")
       setLinks(task?.links || [])
+      setSubtasks(task?.subtasks || [])
       setDate(task?.date || defaultDate || new Date().toISOString().split("T")[0])
       setTime(task?.time || "")
       setError(false)
@@ -58,6 +60,17 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
     setLinks(links.filter((_, i) => i !== index))
   }
 
+  const handleAddSubtask = () => {
+    if (newSubtaskTitle.trim()) {
+      setSubtasks([...subtasks, { id: Math.random().toString(36).substr(2, 9), title: newSubtaskTitle.trim(), completed: false }])
+      setNewSubtaskTitle("")
+    }
+  }
+
+  const handleRemoveSubtask = (id: string) => {
+    setSubtasks(subtasks.filter((s) => s.id !== id))
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) {
@@ -65,12 +78,12 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
       return
     }
 
-    // Construct task data carefully to avoid 'undefined' values for Firestore
     const taskData: any = {
       title: title.trim(),
       date,
       links: links.length > 0 ? links : [],
-      time: time || "" // Use empty string instead of undefined
+      subtasks: subtasks.length > 0 ? subtasks : [],
+      time: time || ""
     }
 
     if (task && onUpdate) {
@@ -93,11 +106,11 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{task ? "Edit Task" : "Add New Task"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div className="space-y-2">
             <Label htmlFor="title" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Task Title *</Label>
             <Input 
@@ -114,11 +127,41 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
           </div>
 
           <div className="space-y-3 bg-secondary/30 p-4 rounded-xl border border-border/50">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Subtasks</Label>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Add a step..." 
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSubtask(); } }}
+                className="h-9 text-sm flex-1"
+              />
+              <Button type="button" size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={handleAddSubtask}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {subtasks.length > 0 && (
+              <div className="space-y-2 mt-2">
+                {subtasks.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between bg-background p-2 rounded-lg border border-border/50 text-xs">
+                    <span className="font-medium truncate flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
+                      {s.title}
+                    </span>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveSubtask(s.id)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 bg-secondary/30 p-4 rounded-xl border border-border/50">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Links & Resources</Label>
-            
             <div className="space-y-2">
               <Input 
-                placeholder="Link Title (e.g., Figma Design)" 
+                placeholder="Link Title (e.g., Figma)" 
                 value={newLinkTitle}
                 onChange={(e) => setNewLinkTitle(e.target.value)}
                 className="h-9 text-sm"
@@ -131,18 +174,11 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
                   onChange={(e) => setNewLinkUrl(e.target.value)}
                   className="h-9 text-sm flex-1"
                 />
-                <Button 
-                  type="button" 
-                  size="icon" 
-                  variant="outline"
-                  className="h-9 w-9 shrink-0"
-                  onClick={handleAddLink}
-                >
+                <Button type="button" size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={handleAddLink}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-
             {links.length > 0 && (
               <div className="space-y-2 mt-3">
                 {links.map((link, idx) => (
@@ -151,13 +187,7 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
                       <LinkIcon className="h-3 w-3 text-primary" />
                       {link.title}
                     </span>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 text-destructive"
-                      onClick={() => handleRemoveLink(idx)}
-                    >
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveLink(idx)}>
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
@@ -169,23 +199,11 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Date</Label>
-              <Input 
-                id="date" 
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-11"
-              />
+              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-11" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="time" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Time</Label>
-              <Input 
-                id="time" 
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="h-11"
-              />
+              <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-11" />
             </div>
           </div>
           <DialogFooter className="pt-4">

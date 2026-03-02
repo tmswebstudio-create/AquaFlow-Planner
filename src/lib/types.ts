@@ -4,10 +4,17 @@ export interface TaskLink {
   url: string;
 }
 
+export interface SubTask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
   links?: TaskLink[];
+  subtasks?: SubTask[];
   date: string; // ISO string (YYYY-MM-DD)
   time?: string; // HH:mm
   completed: boolean;

@@ -32,7 +32,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Task",
       "type": "object",
-      "description": "Represents an individual task with details like title, multiple links, scheduled date and time, and completion status.",
+      "description": "Represents an individual task with details like title, multiple links, subtasks, scheduled date and time, and completion status.",
       "properties": {
         "id": {
           "type": "string",
@@ -52,6 +52,19 @@
               "url": { "type": "string", "format": "uri" }
             },
             "required": ["title", "url"]
+          }
+        },
+        "subtasks": {
+          "type": "array",
+          "description": "An optional array of subtasks.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "completed": { "type": "boolean" }
+            },
+            "required": ["id", "title", "completed"]
           }
         },
         "date": {
@@ -81,6 +94,10 @@
         "ownerId": {
           "type": "string",
           "description": "The UID of the user who owns this task."
+        },
+        "order": {
+          "type": "number",
+          "description": "The display order of the task for a given day."
         }
       },
       "required": [

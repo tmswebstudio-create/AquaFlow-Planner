@@ -5,7 +5,7 @@ import { Task } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Clock, Trash2, Pencil, GripVertical } from "lucide-react"
+import { ExternalLink, Clock, Trash2, Pencil, GripVertical, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddTaskDialog } from "./AddTaskDialog"
 import { useSortable } from "@dnd-kit/sortable"
@@ -33,6 +33,14 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate }: TaskItemProps) 
     transition,
     zIndex: isDragging ? 50 : undefined,
     position: 'relative' as const,
+  };
+
+  const handleToggleSubtask = (subtaskId: string) => {
+    if (!task.subtasks) return;
+    const updatedSubtasks = task.subtasks.map(s => 
+      s.id === subtaskId ? { ...s, completed: !s.completed } : s
+    );
+    onUpdate(task.id, { subtasks: updatedSubtasks });
   };
 
   return (
@@ -92,6 +100,26 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate }: TaskItemProps) 
                 </div>
               )}
             </div>
+
+            {task.subtasks && task.subtasks.length > 0 && (
+              <div className="mt-4 space-y-2 border-t pt-3 border-border/40">
+                {task.subtasks.map((sub) => (
+                  <div key={sub.id} className="flex items-center gap-2 group/sub">
+                    <Checkbox 
+                      checked={sub.completed} 
+                      onCheckedChange={() => handleToggleSubtask(sub.id)}
+                      className="h-3.5 w-3.5 rounded-sm"
+                    />
+                    <span className={cn(
+                      "text-xs transition-colors",
+                      sub.completed ? "line-through text-muted-foreground/60" : "text-foreground/80"
+                    )}>
+                      {sub.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center self-center md:self-start gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
