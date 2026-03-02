@@ -62,7 +62,8 @@
             "properties": {
               "id": { "type": "string" },
               "title": { "type": "string" },
-              "completed": { "type": "boolean" }
+              "completed": { "type": "boolean" },
+              "url": { "type": "string", "format": "uri" }
             },
             "required": ["id", "title", "completed"]
           }

@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, X, Link as LinkIcon, CheckCircle2 } from "lucide-react"
+import { Plus, X, Link as LinkIcon, CheckCircle2, ExternalLink } from "lucide-react"
 import { Task, TaskLink, SubTask } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -33,6 +33,7 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
   const [newLinkTitle, setNewLinkTitle] = useState("")
   const [newLinkUrl, setNewLinkUrl] = useState("")
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("")
+  const [newSubtaskUrl, setNewSubtaskUrl] = useState("")
   const [date, setDate] = useState(task?.date || defaultDate || new Date().toISOString().split("T")[0])
   const [time, setTime] = useState(task?.time || "")
   const [error, setError] = useState(false)
@@ -62,8 +63,14 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
 
   const handleAddSubtask = () => {
     if (newSubtaskTitle.trim()) {
-      setSubtasks([...subtasks, { id: Math.random().toString(36).substr(2, 9), title: newSubtaskTitle.trim(), completed: false }])
+      setSubtasks([...subtasks, { 
+        id: Math.random().toString(36).substr(2, 9), 
+        title: newSubtaskTitle.trim(), 
+        completed: false,
+        url: newSubtaskUrl.trim() || undefined
+      }])
       setNewSubtaskTitle("")
+      setNewSubtaskUrl("")
     }
   }
 
@@ -128,26 +135,41 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
 
           <div className="space-y-3 bg-secondary/30 p-4 rounded-xl border border-border/50">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Subtasks</Label>
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <Input 
-                placeholder="Add a step..." 
+                placeholder="Step title..." 
                 value={newSubtaskTitle}
                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSubtask(); } }}
-                className="h-9 text-sm flex-1"
+                className="h-9 text-sm"
               />
-              <Button type="button" size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={handleAddSubtask}>
-                <Plus className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="Optional Link (https://...)" 
+                  value={newSubtaskUrl}
+                  onChange={(e) => setNewSubtaskUrl(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSubtask(); } }}
+                  className="h-9 text-sm flex-1"
+                />
+                <Button type="button" size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={handleAddSubtask}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             {subtasks.length > 0 && (
               <div className="space-y-2 mt-2">
                 {subtasks.map((s) => (
                   <div key={s.id} className="flex items-center justify-between bg-background p-2 rounded-lg border border-border/50 text-xs">
-                    <span className="font-medium truncate flex items-center gap-2">
-                      <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
-                      {s.title}
-                    </span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium truncate flex items-center gap-2">
+                        <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
+                        {s.title}
+                      </span>
+                      {s.url && (
+                        <span className="text-[10px] text-primary truncate pl-5 max-w-[150px]">
+                          {s.url}
+                        </span>
+                      )}
+                    </div>
                     <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveSubtask(s.id)}>
                       <X className="h-3 w-3" />
                     </Button>

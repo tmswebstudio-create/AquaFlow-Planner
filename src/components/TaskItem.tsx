@@ -5,7 +5,7 @@ import { Task } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Clock, Trash2, Pencil, GripVertical, CheckCircle2 } from "lucide-react"
+import { ExternalLink, Clock, Trash2, Pencil, GripVertical, Link as LinkIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddTaskDialog } from "./AddTaskDialog"
 import { useSortable } from "@dnd-kit/sortable"
@@ -104,18 +104,31 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate }: TaskItemProps) 
             {task.subtasks && task.subtasks.length > 0 && (
               <div className="mt-4 space-y-2 border-t pt-3 border-border/40">
                 {task.subtasks.map((sub) => (
-                  <div key={sub.id} className="flex items-center gap-2 group/sub">
+                  <div key={sub.id} className="flex items-center gap-2.5 group/sub">
                     <Checkbox 
                       checked={sub.completed} 
                       onCheckedChange={() => handleToggleSubtask(sub.id)}
-                      className="h-3.5 w-3.5 rounded-sm"
+                      className="h-4 w-4 rounded-sm"
                     />
-                    <span className={cn(
-                      "text-xs transition-colors",
-                      sub.completed ? "line-through text-muted-foreground/60" : "text-foreground/80"
-                    )}>
-                      {sub.title}
-                    </span>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className={cn(
+                        "text-sm transition-colors",
+                        sub.completed ? "line-through text-muted-foreground/60" : "text-foreground/80 font-medium"
+                      )}>
+                        {sub.title}
+                      </span>
+                      {sub.url && (
+                        <a 
+                          href={sub.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary/70 transition-colors"
+                          title="Visit Link"
+                        >
+                          <LinkIcon className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
