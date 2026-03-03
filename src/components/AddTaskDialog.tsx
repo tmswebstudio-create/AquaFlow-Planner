@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, X, Link as LinkIcon, CheckCircle2, ExternalLink } from "lucide-react"
+import { Plus, X, Link as LinkIcon, CheckCircle2 } from "lucide-react"
 import { Task, TaskLink, SubTask } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -63,12 +63,18 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
 
   const handleAddSubtask = () => {
     if (newSubtaskTitle.trim()) {
-      setSubtasks([...subtasks, { 
+      const subtask: SubTask = { 
         id: Math.random().toString(36).substr(2, 9), 
         title: newSubtaskTitle.trim(), 
         completed: false,
-        url: newSubtaskUrl.trim() || undefined
-      }])
+      }
+      
+      const trimmedUrl = newSubtaskUrl.trim()
+      if (trimmedUrl) {
+        subtask.url = trimmedUrl
+      }
+
+      setSubtasks([...subtasks, subtask])
       setNewSubtaskTitle("")
       setNewSubtaskUrl("")
     }
