@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -124,24 +125,44 @@ export default function AquaFlowPlanner() {
   const { data: tasksData } = useCollection<Task>(tasksRef)
   const tasks = useMemo(() => tasksData || [], [tasksData])
 
-  // Pre-calculate task completion status for all dates
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => addDays(viewDate, i - 3))
+  }, [viewDate])
+
+  // Status map accounts for "rolled over" incomplete tasks
   const taskStatusByDate = useMemo(() => {
     const map: Record<string, { hasTasks: boolean; allCompleted: boolean }> = {}
-    tasks.forEach(t => {
-      if (!map[t.date]) {
-        map[t.date] = { hasTasks: true, allCompleted: true }
-      }
-      if (!t.completed) {
-        map[t.date].allCompleted = false
+    
+    weekDays.forEach(date => {
+      const dStr = format(date, "yyyy-MM-dd")
+      const relevantTasks = tasks.filter(t => 
+        t.date === dStr || (t.date < dStr && !t.completed)
+      )
+      
+      if (relevantTasks.length > 0) {
+        map[dStr] = {
+          hasTasks: true,
+          allCompleted: relevantTasks.every(t => t.completed)
+        }
       }
     })
+    
     return map
-  }, [tasks])
+  }, [tasks, weekDays])
 
   const dailyTasks = useMemo(() => {
     return tasks
-      .filter(t => t.date === dateKey)
+      .filter(t => {
+        // Task belongs to this date
+        if (t.date === dateKey) return true
+        // Task is incomplete and from a past date (Rollover)
+        if (t.date < dateKey && !t.completed) return true
+        return false
+      })
       .sort((a, b) => {
+        // Keep overdue tasks at the top if they are older
+        if (a.date !== b.date) return a.date.localeCompare(b.date)
+        
         if (a.order !== undefined && b.order !== undefined) {
           return a.order - b.order;
         }
@@ -223,10 +244,6 @@ export default function AquaFlowPlanner() {
 
   const pendingTasks = useMemo(() => dailyTasks.filter(t => !t.completed), [dailyTasks])
   const completedTasks = useMemo(() => dailyTasks.filter(t => t.completed), [dailyTasks])
-
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }).map((_, i) => addDays(viewDate, i - 3))
-  }, [viewDate])
 
   if (!isMounted || isUserLoading || !user) {
     return (
