@@ -449,10 +449,13 @@ export default function AquaFlowPlanner() {
               <Collapsible
                 open={isUncompletedOpen}
                 onOpenChange={setIsUncompletedOpen}
-                className="w-full space-y-2 bg-destructive/5 rounded-2xl border border-destructive/10 overflow-hidden"
+                className="w-full space-y-2 bg-destructive/5 rounded-2xl border border-destructive/10 overflow-hidden transition-all duration-200"
               >
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full flex items-center justify-between p-4 h-auto hover:bg-destructive/10 text-destructive font-bold">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full flex items-center justify-between p-4 h-auto hover:bg-destructive/20 text-destructive font-bold transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <AlertCircle className="h-5 w-5" />
                       <span>Uncompleted Tasks ({overdueTasks.length})</span>
