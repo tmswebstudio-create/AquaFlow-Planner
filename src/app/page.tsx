@@ -87,7 +87,7 @@ export default function AquaFlowPlanner() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
   const [isMounted, setIsMounted] = useState(false)
-  const [isOverdueOpen, setIsOverdueOpen] = useState(false)
+  const [isUncompletedOpen, setIsUncompletedOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -112,6 +112,7 @@ export default function AquaFlowPlanner() {
 
   const dateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
   const todayKey = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
+  const yesterdayKey = useMemo(() => format(subDays(new Date(), 1), "yyyy-MM-dd"), [])
 
   const prefRef = useMemoFirebase(() => {
     if (!db || !user) return null
@@ -205,9 +206,17 @@ export default function AquaFlowPlanner() {
 
   const handleMoveToToday = (id: string) => {
     if (!db || !user) return
+    const task = tasks.find(t => t.id === id)
+    if (!task) return
+    
     const docRef = doc(db, "users", user.uid, "tasks", id)
+    
+    // Toggle logic: If it's already on the current date Key (or today), move it to yesterday (overdue)
+    // Otherwise, move it to the current todayKey
+    const targetDate = task.date === todayKey ? yesterdayKey : todayKey
+    
     updateDocumentNonBlocking(docRef, { 
-      date: todayKey,
+      date: targetDate,
       updatedAt: Date.now()
     })
   }
@@ -439,17 +448,17 @@ export default function AquaFlowPlanner() {
 
             {overdueTasks.length > 0 && (
               <Collapsible
-                open={isOverdueOpen}
-                onOpenChange={setIsOverdueOpen}
+                open={isUncompletedOpen}
+                onOpenChange={setIsUncompletedOpen}
                 className="w-full space-y-2 bg-destructive/5 rounded-2xl border border-destructive/10 overflow-hidden"
               >
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" className="w-full flex items-center justify-between p-4 h-auto hover:bg-destructive/10 text-destructive font-bold">
                     <div className="flex items-center gap-3">
                       <AlertCircle className="h-5 w-5" />
-                      <span>Overdue Tasks ({overdueTasks.length})</span>
+                      <span>Uncompleted Tasks ({overdueTasks.length})</span>
                     </div>
-                    {isOverdueOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    {isUncompletedOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="p-4 pt-0 space-y-3">

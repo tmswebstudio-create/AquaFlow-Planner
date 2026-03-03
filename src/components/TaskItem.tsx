@@ -20,6 +20,7 @@ import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { format } from "date-fns"
 
 interface TaskItemProps {
   task: Task
@@ -104,6 +105,9 @@ function SortableSubtaskItem({ sub, onToggle, onDelete }: SortableSubtaskItemPro
 }
 
 export function TaskItem({ task, onToggle, onDelete, onUpdate, onMoveToToday }: TaskItemProps) {
+  const todayKey = format(new Date(), "yyyy-MM-dd")
+  const isCurrentlyToday = task.date === todayKey
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -250,8 +254,11 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate, onMoveToToday }: 
                 variant="ghost" 
                 size="icon" 
                 onClick={onMoveToToday}
-                className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8"
-                title="Move to Today"
+                className={cn(
+                  "h-8 w-8 transition-colors",
+                  isCurrentlyToday ? "text-accent hover:bg-accent/10" : "text-muted-foreground hover:text-accent hover:bg-accent/10"
+                )}
+                title={isCurrentlyToday ? "Move to Overdue" : "Move to Today"}
               >
                 <CalendarDays className="h-4 w-4" />
               </Button>
