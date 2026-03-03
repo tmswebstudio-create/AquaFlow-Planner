@@ -87,7 +87,7 @@ export default function AquaFlowPlanner() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
   const [isMounted, setIsMounted] = useState(false)
-  const [isUncompletedOpen, setIsUncompletedOpen] = useState(false)
+  const [isUncompletedOpen, setIsUncompletedOpen] = useState(true)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -140,20 +140,19 @@ export default function AquaFlowPlanner() {
     return Array.from({ length: 7 }).map((_, i) => addDays(viewDate, i - 3))
   }, [viewDate])
 
-  // Status map accounts for "rolled over" incomplete tasks
+  // Status map now only reflects tasks assigned to specific dates for calendar dots
   const taskStatusByDate = useMemo(() => {
     const map: Record<string, { hasTasks: boolean; allCompleted: boolean }> = {}
     
     weekDays.forEach(date => {
       const dStr = format(date, "yyyy-MM-dd")
-      const relevantTasks = tasks.filter(t => 
-        t.date === dStr || (t.date < dStr && !t.completed)
-      )
+      // Only check tasks assigned directly to this day for the dot status
+      const specificTasks = tasks.filter(t => t.date === dStr)
       
-      if (relevantTasks.length > 0) {
+      if (specificTasks.length > 0) {
         map[dStr] = {
           hasTasks: true,
-          allCompleted: relevantTasks.every(t => t.completed)
+          allCompleted: specificTasks.every(t => t.completed)
         }
       }
     })
@@ -211,9 +210,9 @@ export default function AquaFlowPlanner() {
     
     const docRef = doc(db, "users", user.uid, "tasks", id)
     
-    // Toggle logic: If it's already on the current date Key (or today), move it to yesterday (overdue)
-    // Otherwise, move it to the current todayKey
-    const targetDate = task.date === todayKey ? yesterdayKey : todayKey
+    // Toggle logic: If it's on the selected date Key, move it back to yesterday (overdue)
+    // Otherwise, move it to the selected dateKey (Today/Viewed day)
+    const targetDate = task.date === dateKey ? yesterdayKey : dateKey
     
     updateDocumentNonBlocking(docRef, { 
       date: targetDate,
@@ -298,9 +297,9 @@ export default function AquaFlowPlanner() {
             <Dialog>
               <DialogTrigger asChild>
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="icon" 
-                  className="rounded-full h-9 w-9 md:h-10 md:w-10 text-accent hover:bg-accent hover:text-white transition-all duration-200"
+                  className="rounded-full h-9 w-9 md:h-10 md:w-10 text-accent border-accent hover:bg-accent hover:text-white transition-all duration-200"
                 >
                   <BarChart3 className="h-5 w-5" />
                 </Button>
