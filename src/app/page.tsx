@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -345,7 +344,7 @@ export default function AquaFlowPlanner() {
                       {status?.hasTasks && (
                         <div 
                           className={cn(
-                            "absolute top-1 right-1 h-1.5 w-1.5 rounded-full",
+                            "absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full",
                             status.allCompleted ? "bg-green-500" : "bg-red-500",
                             isActive && "ring-1 ring-white"
                           )} 
