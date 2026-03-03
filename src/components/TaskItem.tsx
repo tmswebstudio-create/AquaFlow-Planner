@@ -5,7 +5,15 @@ import { Task, SubTask } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Clock, Trash2, Pencil, GripVertical, Link as LinkIcon } from "lucide-react"
+import { 
+  ExternalLink, 
+  Clock, 
+  Trash2, 
+  Pencil, 
+  GripVertical, 
+  Link as LinkIcon,
+  CalendarDays
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddTaskDialog } from "./AddTaskDialog"
 import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
@@ -18,6 +26,7 @@ interface TaskItemProps {
   onToggle: (id: string) => void
   onDelete: (id: string) => void
   onUpdate: (id: string, updates: Partial<Task>) => void
+  onMoveToToday?: () => void
 }
 
 interface SortableSubtaskItemProps {
@@ -94,7 +103,7 @@ function SortableSubtaskItem({ sub, onToggle, onDelete }: SortableSubtaskItemPro
   );
 }
 
-export function TaskItem({ task, onToggle, onDelete, onUpdate }: TaskItemProps) {
+export function TaskItem({ task, onToggle, onDelete, onUpdate, onMoveToToday }: TaskItemProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -185,6 +194,12 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate }: TaskItemProps) 
                   {task.time}
                 </span>
               )}
+
+              {task.date && (
+                <span className="flex items-center gap-1 bg-secondary/50 px-1.5 py-0.5 rounded italic">
+                  {task.date}
+                </span>
+              )}
               
               {task.links && task.links.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -230,6 +245,17 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate }: TaskItemProps) 
           </div>
 
           <div className="flex items-center self-center md:self-start gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+            {onMoveToToday && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={onMoveToToday}
+                className="text-muted-foreground hover:text-accent hover:bg-accent/10 h-8 w-8"
+                title="Move to Today"
+              >
+                <CalendarDays className="h-4 w-4" />
+              </Button>
+            )}
             <AddTaskDialog 
               task={task} 
               onUpdate={onUpdate}

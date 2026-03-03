@@ -17,7 +17,10 @@ import {
   ChevronRight,
   BarChart3,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react"
 import { 
   Dialog, 
@@ -34,6 +37,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { format, addDays, isSameDay, subDays } from "date-fns"
@@ -79,6 +87,7 @@ export default function AquaFlowPlanner() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
   const [isMounted, setIsMounted] = useState(false)
+  const [isOverdueOpen, setIsOverdueOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -102,6 +111,7 @@ export default function AquaFlowPlanner() {
   }, [user, isUserLoading, router])
 
   const dateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
+  const todayKey = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
 
   const prefRef = useMemoFirebase(() => {
     if (!db || !user) return null
@@ -152,17 +162,8 @@ export default function AquaFlowPlanner() {
 
   const dailyTasks = useMemo(() => {
     return tasks
-      .filter(t => {
-        // Task belongs to this date
-        if (t.date === dateKey) return true
-        // Task is incomplete and from a past date (Rollover)
-        if (t.date < dateKey && !t.completed) return true
-        return false
-      })
+      .filter(t => t.date === dateKey)
       .sort((a, b) => {
-        // Keep overdue tasks at the top if they are older
-        if (a.date !== b.date) return a.date.localeCompare(b.date)
-        
         if (a.order !== undefined && b.order !== undefined) {
           return a.order - b.order;
         }
@@ -171,6 +172,12 @@ export default function AquaFlowPlanner() {
         if (b.time) return 1
         return (a.createdAt || 0) - (b.createdAt || 0)
       })
+  }, [tasks, dateKey])
+
+  const overdueTasks = useMemo(() => {
+    return tasks
+      .filter(t => t.date < dateKey && !t.completed)
+      .sort((a, b) => a.date.localeCompare(b.date))
   }, [tasks, dateKey])
 
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed" | "updatedAt" | "ownerId">) => {
@@ -192,6 +199,15 @@ export default function AquaFlowPlanner() {
     const docRef = doc(db, "users", user.uid, "tasks", id)
     updateDocumentNonBlocking(docRef, { 
       ...updates,
+      updatedAt: Date.now()
+    })
+  }
+
+  const handleMoveToToday = (id: string) => {
+    if (!db || !user) return
+    const docRef = doc(db, "users", user.uid, "tasks", id)
+    updateDocumentNonBlocking(docRef, { 
+      date: todayKey,
       updatedAt: Date.now()
     })
   }
@@ -421,6 +437,36 @@ export default function AquaFlowPlanner() {
 
             <TimelineView schedule={currentSchedule} tasks={dailyTasks} />
 
+            {overdueTasks.length > 0 && (
+              <Collapsible
+                open={isOverdueOpen}
+                onOpenChange={setIsOverdueOpen}
+                className="w-full space-y-2 bg-destructive/5 rounded-2xl border border-destructive/10 overflow-hidden"
+              >
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full flex items-center justify-between p-4 h-auto hover:bg-destructive/10 text-destructive font-bold">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-5 w-5" />
+                      <span>Overdue Tasks ({overdueTasks.length})</span>
+                    </div>
+                    {isOverdueOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="p-4 pt-0 space-y-3">
+                  {overdueTasks.map(task => (
+                    <TaskItem 
+                      key={task.id} 
+                      task={task} 
+                      onToggle={handleToggleTask} 
+                      onDelete={handleDeleteTask}
+                      onUpdate={handleEditTask}
+                      onMoveToToday={() => handleMoveToToday(task.id)}
+                    />
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             <div className="space-y-4">
               <DndContext
                 sensors={sensors}
@@ -440,6 +486,7 @@ export default function AquaFlowPlanner() {
                           onToggle={handleToggleTask} 
                           onDelete={handleDeleteTask}
                           onUpdate={handleEditTask}
+                          onMoveToToday={() => handleMoveToToday(task.id)}
                         />
                       ))}
                     </SortableContext>
@@ -464,6 +511,7 @@ export default function AquaFlowPlanner() {
                                 onToggle={handleToggleTask} 
                                 onDelete={handleDeleteTask}
                                 onUpdate={handleEditTask}
+                                onMoveToToday={() => handleMoveToToday(task.id)}
                               />
                             ))}
                           </SortableContext>
