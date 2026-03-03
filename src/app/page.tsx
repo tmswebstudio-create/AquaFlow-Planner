@@ -125,6 +125,20 @@ export default function AquaFlowPlanner() {
   const { data: tasksData } = useCollection<Task>(tasksRef)
   const tasks = useMemo(() => tasksData || [], [tasksData])
 
+  // Pre-calculate task completion status for all dates
+  const taskStatusByDate = useMemo(() => {
+    const map: Record<string, { hasTasks: boolean; allCompleted: boolean }> = {}
+    tasks.forEach(t => {
+      if (!map[t.date]) {
+        map[t.date] = { hasTasks: true, allCompleted: true }
+      }
+      if (!t.completed) {
+        map[t.date].allCompleted = false
+      }
+    })
+    return map
+  }, [tasks])
+
   const dailyTasks = useMemo(() => {
     return tasks
       .filter(t => t.date === dateKey)
@@ -312,6 +326,8 @@ export default function AquaFlowPlanner() {
               </div>
               <div className="grid grid-cols-7 gap-1.5">
                 {weekDays.map((date) => {
+                  const dateStr = format(date, "yyyy-MM-dd")
+                  const status = taskStatusByDate[dateStr]
                   const isActive = isSameDay(date, selectedDate)
                   const isToday = isSameDay(date, new Date())
                   return (
@@ -319,13 +335,22 @@ export default function AquaFlowPlanner() {
                       key={date.toISOString()}
                       onClick={() => setSelectedDate(date)}
                       className={cn(
-                        "flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all border",
+                        "relative flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all border",
                         isActive 
                           ? "bg-primary text-white border-primary shadow-md scale-105" 
                           : "bg-white text-muted-foreground border-transparent hover:border-primary/20",
                         isToday && !isActive && "text-primary font-bold bg-primary/5 border-primary/10"
                       )}
                     >
+                      {status?.hasTasks && (
+                        <div 
+                          className={cn(
+                            "absolute top-1 right-1 h-1.5 w-1.5 rounded-full",
+                            status.allCompleted ? "bg-green-500" : "bg-red-500",
+                            isActive && "ring-1 ring-white"
+                          )} 
+                        />
+                      )}
                       <span className="text-[10px] uppercase font-bold opacity-70">
                         {format(date, "EEE")}
                       </span>
