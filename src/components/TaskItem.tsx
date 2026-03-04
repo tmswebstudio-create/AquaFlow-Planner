@@ -156,9 +156,9 @@ function SortableSubtaskItem({ sub, onToggle, onDelete }: SortableSubtaskItemPro
           variant="ghost" 
           size="icon" 
           onClick={() => onDelete(sub.id)}
-          className="h-6 w-6 opacity-0 group-hover/sub:opacity-100 text-muted-foreground hover:text-destructive"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 opacity-0 group-hover/sub:opacity-100 transition-opacity"
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 
