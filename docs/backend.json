@@ -63,7 +63,17 @@
               "id": { "type": "string" },
               "title": { "type": "string" },
               "completed": { "type": "boolean" },
-              "url": { "type": "string", "format": "uri" }
+              "links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": { "type": "string" },
+                    "url": { "type": "string", "format": "uri" }
+                  },
+                  "required": ["title", "url"]
+                }
+              }
             },
             "required": ["id", "title", "completed"]
           }

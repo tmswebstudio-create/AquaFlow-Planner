@@ -8,7 +8,7 @@ export interface SubTask {
   id: string;
   title: string;
   completed: boolean;
-  url?: string;
+  links?: TaskLink[];
 }
 
 export interface Task {

@@ -1,7 +1,8 @@
 
 "use client"
 
-import { Task, SubTask } from "@/lib/types"
+import { useRef, useState, useEffect } from "react"
+import { Task, SubTask, TaskLink } from "@/lib/types"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
@@ -12,7 +13,9 @@ import {
   Pencil, 
   GripVertical, 
   Link as LinkIcon,
-  CalendarDays
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddTaskDialog } from "./AddTaskDialog"
@@ -36,6 +39,73 @@ interface SortableSubtaskItemProps {
   onDelete: (id: string) => void
 }
 
+function SubtaskLinksCarousel({ links }: { links: TaskLink[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [showArrows, setShowArrows] = useState(false)
+
+  const checkArrows = () => {
+    if (scrollRef.current) {
+      const { scrollWidth, clientWidth } = scrollRef.current
+      setShowArrows(scrollWidth > clientWidth)
+    }
+  }
+
+  useEffect(() => {
+    checkArrows()
+    window.addEventListener('resize', checkArrows)
+    return () => window.removeEventListener('resize', checkArrows)
+  }, [links])
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = 150
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  return (
+    <div className="relative group/carousel w-full mt-1.5 pl-6">
+      {showArrows && (
+        <>
+          <button 
+            onClick={() => scroll('left')}
+            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 bg-white/90 border rounded-full p-0.5 shadow-sm opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+          >
+            <ChevronLeft className="h-3 w-3 text-muted-foreground" />
+          </button>
+          <button 
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 border rounded-full p-0.5 shadow-sm opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+          >
+            <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          </button>
+        </>
+      )}
+      <div 
+        ref={scrollRef}
+        className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-1"
+      >
+        {links.map((link, idx) => (
+          <a 
+            key={idx}
+            href={link.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 shrink-0 bg-primary/5 text-primary text-[10px] px-2 py-0.5 rounded-full border border-primary/10 hover:bg-primary/10 transition-colors"
+          >
+            <LinkIcon className="h-2.5 w-2.5" />
+            <span className="max-w-[120px] truncate">{link.title}</span>
+            <ExternalLink className="h-2 w-2 opacity-50" />
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function SortableSubtaskItem({ sub, onToggle, onDelete }: SortableSubtaskItemProps) {
   const {
     attributes,
@@ -57,49 +127,44 @@ function SortableSubtaskItem({ sub, onToggle, onDelete }: SortableSubtaskItemPro
       ref={setNodeRef} 
       style={style} 
       className={cn(
-        "flex items-center gap-2.5 group/sub bg-background/50 p-1.5 rounded-lg border border-transparent transition-all",
+        "flex flex-col group/sub bg-background/50 p-2 rounded-lg border border-transparent transition-all",
         isDragging && "shadow-md bg-white border-primary/20 scale-[1.01]"
       )}
     >
-      <div 
-        {...attributes} 
-        {...listeners} 
-        className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground"
-      >
-        <GripVertical className="h-3.5 w-3.5" />
+      <div className="flex items-center gap-2.5">
+        <div 
+          {...attributes} 
+          {...listeners} 
+          className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </div>
+        <Checkbox 
+          checked={sub.completed} 
+          onCheckedChange={() => onToggle(sub.id)}
+          className="h-4 w-4 rounded-sm"
+        />
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className={cn(
+            "text-base transition-colors leading-tight",
+            sub.completed ? "line-through text-muted-foreground/60" : "text-foreground/80 font-bold"
+          )}>
+            {sub.title}
+          </span>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => onDelete(sub.id)}
+          className="h-6 w-6 opacity-0 group-hover/sub:opacity-100 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
       </div>
-      <Checkbox 
-        checked={sub.completed} 
-        onCheckedChange={() => onToggle(sub.id)}
-        className="h-4 w-4 rounded-sm"
-      />
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <span className={cn(
-          "text-sm transition-colors",
-          sub.completed ? "line-through text-muted-foreground/60" : "text-foreground/80 font-medium"
-        )}>
-          {sub.title}
-        </span>
-        {sub.url && (
-          <a 
-            href={sub.url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-primary hover:text-primary/70 transition-colors"
-            title="Visit Link"
-          >
-            <LinkIcon className="h-3 w-3" />
-          </a>
-        )}
-      </div>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        onClick={() => onDelete(sub.id)}
-        className="h-6 w-6 opacity-0 group-hover/sub:opacity-100 text-muted-foreground hover:text-destructive"
-      >
-        <Trash2 className="h-3 w-3" />
-      </Button>
+
+      {sub.links && sub.links.length > 0 && (
+        <SubtaskLinksCarousel links={sub.links} />
+      )}
     </div>
   );
 }
