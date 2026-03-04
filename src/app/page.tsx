@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/collapsible"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { format, addDays, isSameDay, subDays } from "date-fns"
+import { format, addDays, isSameDay, subDays, parse } from "date-fns"
 import { 
   useUser, 
   useFirestore, 
@@ -87,7 +87,7 @@ export default function AquaFlowPlanner() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
   const [isMounted, setIsMounted] = useState(false)
-  const [isUncompletedOpen, setIsUncompletedOpen] = useState(false)
+  const [isOverdueOpen, setIsOverdueOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -110,10 +110,6 @@ export default function AquaFlowPlanner() {
     }
   }, [user, isUserLoading, router])
 
-  const dateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
-  const todayKey = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
-  const yesterdayKey = useMemo(() => format(subDays(new Date(), 1), "yyyy-MM-dd"), [])
-
   const prefRef = useMemoFirebase(() => {
     if (!db || !user) return null
     return doc(db, "users", user.uid, "preferences", "profile")
@@ -121,12 +117,37 @@ export default function AquaFlowPlanner() {
   
   const { data: prefData } = useDoc<DailySchedule & { [key: string]: DailySchedule }>(prefRef)
 
-  const currentSchedule = useMemo(() => {
-    if (prefData && prefData[dateKey]) {
-      return prefData[dateKey]
+  // Logic to determine the current "Flow Date"
+  const activeFlowDateStr = useMemo(() => {
+    const now = new Date()
+    const nowTimeStr = format(now, "HH:mm")
+    
+    // Default to midnight if no pref data
+    const wakeUpTime = prefData?.wakeUpTime || "00:00"
+    const sleepTime = prefData?.sleepTime || "00:00"
+
+    // If sleep is after midnight (e.g., 02:00)
+    if (sleepTime < wakeUpTime) {
+      // If current time is between midnight and sleep time, we are still in "yesterday's" flow
+      if (nowTimeStr <= sleepTime) {
+        return format(subDays(now, 1), "yyyy-MM-dd")
+      }
     }
-    return { wakeUpTime: "00:00", sleepTime: "00:00" }
-  }, [prefData, dateKey])
+    
+    return format(now, "yyyy-MM-dd")
+  }, [prefData])
+
+  const selectedDateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
+
+  const currentSchedule = useMemo(() => {
+    if (prefData && prefData[selectedDateKey]) {
+      return prefData[selectedDateKey]
+    }
+    return { 
+      wakeUpTime: prefData?.wakeUpTime || "08:00", 
+      sleepTime: prefData?.sleepTime || "22:00" 
+    }
+  }, [prefData, selectedDateKey])
 
   const tasksRef = useMemoFirebase(() => {
     if (!db || !user) return null
@@ -160,7 +181,7 @@ export default function AquaFlowPlanner() {
 
   const dailyTasks = useMemo(() => {
     return tasks
-      .filter(t => t.date === dateKey)
+      .filter(t => t.date === selectedDateKey)
       .sort((a, b) => {
         if (a.order !== undefined && b.order !== undefined) {
           return a.order - b.order;
@@ -170,13 +191,14 @@ export default function AquaFlowPlanner() {
         if (b.time) return 1
         return (a.createdAt || 0) - (b.createdAt || 0)
       })
-  }, [tasks, dateKey])
+  }, [tasks, selectedDateKey])
 
   const overdueTasks = useMemo(() => {
+    // Overdue tasks are uncompleted tasks from Flow Dates prior to the selected Flow Date
     return tasks
-      .filter(t => t.date < dateKey && !t.completed)
+      .filter(t => t.date < selectedDateKey && !t.completed)
       .sort((a, b) => a.date.localeCompare(b.date))
-  }, [tasks, dateKey])
+  }, [tasks, selectedDateKey])
 
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed" | "updatedAt" | "ownerId">) => {
     if (!db || !user) return
@@ -201,13 +223,17 @@ export default function AquaFlowPlanner() {
     })
   }
 
-  const handleMoveToToday = (id: string) => {
+  const handleToggleFlowDate = (id: string) => {
     if (!db || !user) return
     const task = tasks.find(t => t.id === id)
     if (!task) return
     
     const docRef = doc(db, "users", user.uid, "tasks", id)
-    const targetDate = task.date === dateKey ? yesterdayKey : dateKey
+    
+    // Logic: If on selected day, move to "Yesterday's" Flow Date. If on Yesterday (or older), move to Selected Date.
+    const isCurrent = task.date === selectedDateKey
+    const yesterdayDateKey = format(subDays(selectedDate, 1), "yyyy-MM-dd")
+    const targetDate = isCurrent ? yesterdayDateKey : selectedDateKey
     
     updateDocumentNonBlocking(docRef, { 
       date: targetDate,
@@ -252,7 +278,8 @@ export default function AquaFlowPlanner() {
     if (!prefRef || !user) return
     setDocumentNonBlocking(prefRef, {
       id: "profile",
-      [dateKey]: newSchedule,
+      [selectedDateKey]: newSchedule,
+      // Also update the global defaults
       wakeUpTime: newSchedule.wakeUpTime,
       sleepTime: newSchedule.sleepTime
     }, { merge: true })
@@ -364,7 +391,8 @@ export default function AquaFlowPlanner() {
                   const dateStr = format(date, "yyyy-MM-dd")
                   const status = taskStatusByDate[dateStr]
                   const isActive = isSameDay(date, selectedDate)
-                  const isToday = isSameDay(date, new Date())
+                  const isTodayFlow = dateStr === activeFlowDateStr
+                  
                   return (
                     <button
                       key={date.toISOString()}
@@ -374,13 +402,13 @@ export default function AquaFlowPlanner() {
                         isActive 
                           ? "bg-primary text-white border-primary shadow-md scale-105" 
                           : "bg-white text-muted-foreground border-transparent hover:border-primary/20",
-                        isToday && !isActive && "text-primary font-bold bg-primary/5 border-primary/10"
+                        isTodayFlow && !isActive && "text-primary font-bold bg-primary/5 border-primary/10"
                       )}
                     >
                       {status?.hasTasks && (
                         <div 
                           className={cn(
-                            "absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full",
+                            "absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full",
                             status.allCompleted ? "bg-green-500" : "bg-red-500",
                             isActive && "ring-1 ring-white"
                           )} 
@@ -431,31 +459,31 @@ export default function AquaFlowPlanner() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-foreground">
-                  {isSameDay(selectedDate, new Date()) ? "Today's Flow" : format(selectedDate, "MMMM do")}
+                  {selectedDateKey === activeFlowDateStr ? "Today's Flow" : format(selectedDate, "MMMM do")}
                 </h2>
                 <p className="text-sm text-muted-foreground">Plan your flow for {format(selectedDate, "EEEE")}.</p>
               </div>
-              <AddTaskDialog onAdd={handleAddTask} defaultDate={dateKey} />
+              <AddTaskDialog onAdd={handleAddTask} defaultDate={selectedDateKey} />
             </div>
 
             <TimelineView schedule={currentSchedule} tasks={dailyTasks} />
 
             {overdueTasks.length > 0 && (
               <Collapsible
-                open={isUncompletedOpen}
-                onOpenChange={setIsUncompletedOpen}
+                open={isOverdueOpen}
+                onOpenChange={setIsOverdueOpen}
                 className="w-full space-y-2 bg-destructive/5 rounded-2xl border border-destructive/10 overflow-hidden transition-all duration-200"
               >
                 <CollapsibleTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    className="w-full flex items-center justify-between p-4 h-auto hover:bg-destructive/20 text-destructive font-bold transition-colors"
+                    className="w-full flex items-center justify-between p-4 h-auto hover:bg-destructive/10 text-destructive font-bold transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <AlertCircle className="h-5 w-5" />
                       <span>Overdue Tasks ({overdueTasks.length})</span>
                     </div>
-                    {isUncompletedOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    {isOverdueOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down p-4 pt-0 space-y-3">
@@ -466,7 +494,7 @@ export default function AquaFlowPlanner() {
                       onToggle={handleToggleTask} 
                       onDelete={handleDeleteTask}
                       onUpdate={handleEditTask}
-                      onMoveToToday={() => handleMoveToToday(task.id)}
+                      onMoveToToday={() => handleToggleFlowDate(task.id)}
                     />
                   ))}
                 </CollapsibleContent>
@@ -492,7 +520,7 @@ export default function AquaFlowPlanner() {
                           onToggle={handleToggleTask} 
                           onDelete={handleDeleteTask}
                           onUpdate={handleEditTask}
-                          onMoveToToday={() => handleMoveToToday(task.id)}
+                          onMoveToToday={() => handleToggleFlowDate(task.id)}
                         />
                       ))}
                     </SortableContext>
@@ -517,7 +545,7 @@ export default function AquaFlowPlanner() {
                                 onToggle={handleToggleTask} 
                                 onDelete={handleDeleteTask}
                                 onUpdate={handleEditTask}
-                                onMoveToToday={() => handleMoveToToday(task.id)}
+                                onMoveToToday={() => handleToggleFlowDate(task.id)}
                               />
                             ))}
                           </SortableContext>
