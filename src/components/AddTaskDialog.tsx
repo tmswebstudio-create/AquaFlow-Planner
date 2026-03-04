@@ -231,7 +231,13 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
                         <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
                         {s.title}
                       </span>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveSubtask(s.id)}>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 text-destructive hover:bg-destructive hover:text-white transition-all" 
+                        onClick={() => handleRemoveSubtask(s.id)}
+                      >
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
@@ -281,7 +287,7 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
                       <LinkIcon className="h-3 w-3 text-primary" />
                       {link.title}
                     </span>
-                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveLink(idx)}>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive hover:text-white transition-all" onClick={() => handleRemoveLink(idx)}>
                       <X className="h-3 w-3" />
                     </Button>
                   </div>

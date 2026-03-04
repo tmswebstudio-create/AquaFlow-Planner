@@ -15,7 +15,8 @@ import {
   Link as LinkIcon,
   CalendarDays,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddTaskDialog } from "./AddTaskDialog"
@@ -156,9 +157,9 @@ function SortableSubtaskItem({ sub, onToggle, onDelete }: SortableSubtaskItemPro
           variant="ghost" 
           size="icon" 
           onClick={() => onDelete(sub.id)}
-          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 opacity-0 group-hover/sub:opacity-100 transition-opacity"
+          className="text-destructive hover:bg-destructive hover:text-white h-8 w-8 opacity-0 group-hover/sub:opacity-100 transition-all"
         >
-          <Trash2 className="h-4 w-4" />
+          <X className="h-4 w-4" />
         </Button>
       </div>
 
@@ -320,8 +321,8 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate, onMoveToToday }: 
                 size="icon" 
                 onClick={onMoveToToday}
                 className={cn(
-                  "h-8 w-8 transition-colors",
-                  isCurrentlyToday ? "text-accent hover:bg-accent/10" : "text-muted-foreground hover:text-accent hover:bg-accent/10"
+                  "h-8 w-8 transition-all hover:bg-accent hover:text-white",
+                  isCurrentlyToday ? "text-accent" : "text-muted-foreground"
                 )}
                 title={isCurrentlyToday ? "Move to Overdue" : "Move to Today"}
               >
@@ -345,7 +346,7 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate, onMoveToToday }: 
               variant="ghost" 
               size="icon" 
               onClick={() => onDelete(task.id)}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+              className="text-destructive hover:bg-destructive hover:text-white h-8 w-8 transition-all"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
