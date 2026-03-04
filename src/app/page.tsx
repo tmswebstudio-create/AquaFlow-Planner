@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -139,13 +140,11 @@ export default function AquaFlowPlanner() {
     return Array.from({ length: 7 }).map((_, i) => addDays(viewDate, i - 3))
   }, [viewDate])
 
-  // Status map now only reflects tasks assigned to specific dates for calendar dots
   const taskStatusByDate = useMemo(() => {
     const map: Record<string, { hasTasks: boolean; allCompleted: boolean }> = {}
     
     weekDays.forEach(date => {
       const dStr = format(date, "yyyy-MM-dd")
-      // Only check tasks assigned directly to this day for the dot status
       const specificTasks = tasks.filter(t => t.date === dStr)
       
       if (specificTasks.length > 0) {
@@ -208,9 +207,6 @@ export default function AquaFlowPlanner() {
     if (!task) return
     
     const docRef = doc(db, "users", user.uid, "tasks", id)
-    
-    // Toggle logic: If it's on the selected date Key, move it back to yesterday (overdue)
-    // Otherwise, move it to the selected dateKey (Today/Viewed day)
     const targetDate = task.date === dateKey ? yesterdayKey : dateKey
     
     updateDocumentNonBlocking(docRef, { 
@@ -462,7 +458,7 @@ export default function AquaFlowPlanner() {
                     {isUncompletedOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="p-4 pt-0 space-y-3">
+                <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down p-4 pt-0 space-y-3">
                   {overdueTasks.map(task => (
                     <TaskItem 
                       key={task.id} 
