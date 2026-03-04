@@ -24,7 +24,7 @@ import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 
 interface TaskItemProps {
   task: Task
@@ -157,7 +157,7 @@ function SortableSubtaskItem({ sub, onToggle, onDelete }: SortableSubtaskItemPro
           variant="ghost" 
           size="icon" 
           onClick={() => onDelete(sub.id)}
-          className="text-destructive hover:bg-destructive hover:text-white h-8 w-8 opacity-0 group-hover/sub:opacity-100 transition-all"
+          className="text-destructive hover:bg-destructive hover:text-white h-8 w-8 opacity-0 group-hover/sub:opacity-100 transition-all rounded-md"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -267,7 +267,7 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate, onMoveToToday }: 
 
               {task.date && (
                 <span className="flex items-center gap-1 bg-secondary/50 px-1.5 py-0.5 rounded italic">
-                  {task.date}
+                  {format(parseISO(task.date), "d MMM, yyyy")}
                 </span>
               )}
               
@@ -321,8 +321,8 @@ export function TaskItem({ task, onToggle, onDelete, onUpdate, onMoveToToday }: 
                 size="icon" 
                 onClick={onMoveToToday}
                 className={cn(
-                  "h-8 w-8 transition-all hover:bg-accent hover:text-white",
-                  isCurrentlyToday ? "text-accent" : "text-muted-foreground"
+                  "h-8 w-8 transition-all hover:bg-primary hover:text-white",
+                  isCurrentlyToday ? "text-primary" : "text-muted-foreground"
                 )}
                 title={isCurrentlyToday ? "Move to Overdue" : "Move to Today"}
               >
