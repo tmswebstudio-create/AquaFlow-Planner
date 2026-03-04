@@ -86,7 +86,7 @@ export default function AquaFlowPlanner() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewDate, setViewDate] = useState<Date>(new Date())
   const [isMounted, setIsMounted] = useState(false)
-  const [isUncompletedOpen, setIsUncompletedOpen] = useState(true)
+  const [isUncompletedOpen, setIsUncompletedOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
