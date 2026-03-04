@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, X, Link as LinkIcon, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react"
+import { Plus, X, Link as LinkIcon, CheckCircle2 } from "lucide-react"
 import { Task, TaskLink, SubTask } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -91,7 +91,7 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
         id: Math.random().toString(36).substr(2, 9), 
         title: newSubtaskTitle.trim(), 
         completed: false,
-        links: newSubtaskLinks.length > 0 ? [...newSubtaskLinks] : undefined
+        links: newSubtaskLinks.length > 0 ? [...newSubtaskLinks] : []
       }
 
       setSubtasks([...subtasks, subtask])
