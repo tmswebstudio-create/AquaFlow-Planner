@@ -124,14 +124,11 @@ export default function AquaFlowPlanner() {
     
     // Default to midnight if no pref data
     const wakeUpTime = prefData?.wakeUpTime || "00:00"
-    const sleepTime = prefData?.sleepTime || "00:00"
 
-    // If sleep is after midnight (e.g., 02:00)
-    if (sleepTime < wakeUpTime) {
-      // If current time is between midnight and sleep time, we are still in "yesterday's" flow
-      if (nowTimeStr <= sleepTime) {
-        return format(subDays(now, 1), "yyyy-MM-dd")
-      }
+    // A flow day starts at wake-up time. 
+    // If it's 2 AM and wake-up is 8 AM, we are still in "yesterday's" flow.
+    if (wakeUpTime !== "00:00" && nowTimeStr < wakeUpTime) {
+      return format(subDays(now, 1), "yyyy-MM-dd")
     }
     
     return format(now, "yyyy-MM-dd")
@@ -144,8 +141,8 @@ export default function AquaFlowPlanner() {
       return prefData[selectedDateKey]
     }
     return { 
-      wakeUpTime: prefData?.wakeUpTime || "08:00", 
-      sleepTime: prefData?.sleepTime || "22:00" 
+      wakeUpTime: prefData?.wakeUpTime || "00:00", 
+      sleepTime: prefData?.sleepTime || "00:00" 
     }
   }, [prefData, selectedDateKey])
 
