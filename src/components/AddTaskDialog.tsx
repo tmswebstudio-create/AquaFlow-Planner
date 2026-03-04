@@ -113,6 +113,7 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
       return
     }
 
+    // Ensure links and subtasks are never undefined when sending to Firestore
     const taskData: any = {
       title: title.trim(),
       date,
@@ -235,7 +236,7 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
                         type="button" 
                         variant="ghost" 
                         size="icon" 
-                        className="h-6 w-6 text-destructive hover:bg-destructive hover:text-white transition-all" 
+                        className="h-6 w-6 text-destructive hover:bg-destructive hover:text-white transition-all rounded-md" 
                         onClick={() => handleRemoveSubtask(s.id)}
                       >
                         <X className="h-3 w-3" />
@@ -287,7 +288,7 @@ export function AddTaskDialog({ onAdd, onUpdate, task, defaultDate, trigger }: A
                       <LinkIcon className="h-3 w-3 text-primary" />
                       {link.title}
                     </span>
-                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive hover:text-white transition-all" onClick={() => handleRemoveLink(idx)}>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive hover:text-white transition-all rounded-md" onClick={() => handleRemoveLink(idx)}>
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
