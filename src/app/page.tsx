@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/collapsible"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { format, addDays, isSameDay, subDays, parse } from "date-fns"
+import { format, addDays, isSameDay, subDays } from "date-fns"
 import { 
   useUser, 
   useFirestore, 
@@ -88,6 +88,7 @@ export default function AquaFlowPlanner() {
   const [viewDate, setViewDate] = useState<Date>(new Date())
   const [isMounted, setIsMounted] = useState(false)
   const [isOverdueOpen, setIsOverdueOpen] = useState(false)
+  const [now, setNow] = useState(new Date())
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -102,6 +103,8 @@ export default function AquaFlowPlanner() {
 
   useEffect(() => {
     setIsMounted(true)
+    const timer = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(timer)
   }, [])
 
   useEffect(() => {
@@ -119,20 +122,54 @@ export default function AquaFlowPlanner() {
 
   // Logic to determine the current "Flow Date"
   const activeFlowDateStr = useMemo(() => {
-    const now = new Date()
     const nowTimeStr = format(now, "HH:mm")
-    
-    // Default to midnight if no pref data
     const wakeUpTime = prefData?.wakeUpTime || "00:00"
 
     // A flow day starts at wake-up time. 
-    // If it's 2 AM and wake-up is 8 AM, we are still in "yesterday's" flow.
     if (wakeUpTime !== "00:00" && nowTimeStr < wakeUpTime) {
       return format(subDays(now, 1), "yyyy-MM-dd")
     }
     
     return format(now, "yyyy-MM-dd")
-  }, [prefData])
+  }, [prefData, now])
+
+  const activeFlowSchedule = useMemo(() => {
+    if (prefData && prefData[activeFlowDateStr]) {
+      return prefData[activeFlowDateStr]
+    }
+    return { 
+      wakeUpTime: prefData?.wakeUpTime || "00:00", 
+      sleepTime: prefData?.sleepTime || "00:00" 
+    }
+  }, [prefData, activeFlowDateStr])
+
+  const isTaskOverdue = (task: Task) => {
+    if (task.completed) return false
+    
+    // Tasks from strictly older flow dates are always overdue
+    if (task.date < activeFlowDateStr) return true
+    
+    // Tasks from the current flow date become overdue if past sleep time
+    if (task.date === activeFlowDateStr) {
+      const nowTimeStr = format(now, "HH:mm")
+      const sleepTime = activeFlowSchedule.sleepTime
+      const wakeUpTime = activeFlowSchedule.wakeUpTime
+      
+      if (sleepTime === "00:00") return false // Logic only applies if sleep time is input
+      
+      if (sleepTime > wakeUpTime) {
+        // Standard day shift (e.g., 08:00 - 23:00)
+        // Overdue if current time is past sleep OR before wake-up (next morning gap)
+        return nowTimeStr > sleepTime || nowTimeStr < wakeUpTime
+      } else {
+        // Night owl shift (e.g., 14:00 - 02:00)
+        // Overdue if current time is past sleep AND before wake-up
+        return nowTimeStr > sleepTime && nowTimeStr < wakeUpTime
+      }
+    }
+    
+    return false
+  }
 
   const selectedDateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
 
@@ -163,6 +200,7 @@ export default function AquaFlowPlanner() {
     
     weekDays.forEach(date => {
       const dStr = format(date, "yyyy-MM-dd")
+      // Calendar dots only reflect tasks explicitly planned for that day
       const specificTasks = tasks.filter(t => t.date === dStr)
       
       if (specificTasks.length > 0) {
@@ -178,7 +216,7 @@ export default function AquaFlowPlanner() {
 
   const dailyTasks = useMemo(() => {
     return tasks
-      .filter(t => t.date === selectedDateKey)
+      .filter(t => t.date === selectedDateKey && !isTaskOverdue(t))
       .sort((a, b) => {
         if (a.order !== undefined && b.order !== undefined) {
           return a.order - b.order;
@@ -188,14 +226,13 @@ export default function AquaFlowPlanner() {
         if (b.time) return 1
         return (a.createdAt || 0) - (b.createdAt || 0)
       })
-  }, [tasks, selectedDateKey])
+  }, [tasks, selectedDateKey, activeFlowDateStr, now])
 
   const overdueTasks = useMemo(() => {
-    // Overdue tasks are uncompleted tasks from Flow Dates prior to the selected Flow Date
     return tasks
-      .filter(t => t.date < selectedDateKey && !t.completed)
+      .filter(t => isTaskOverdue(t))
       .sort((a, b) => a.date.localeCompare(b.date))
-  }, [tasks, selectedDateKey])
+  }, [tasks, activeFlowDateStr, now])
 
   const handleAddTask = (taskData: Omit<Task, "id" | "createdAt" | "completed" | "updatedAt" | "ownerId">) => {
     if (!db || !user) return
@@ -504,7 +541,7 @@ export default function AquaFlowPlanner() {
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                {dailyTasks.length > 0 ? (
+                {dailyTasks.length > 0 || completedTasks.length > 0 ? (
                   <div className="grid gap-4">
                     <SortableContext
                       items={dailyTasks.map(t => t.id)}
