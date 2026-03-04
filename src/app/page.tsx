@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -458,7 +457,7 @@ export default function AquaFlowPlanner() {
                   >
                     <div className="flex items-center gap-3">
                       <AlertCircle className="h-5 w-5" />
-                      <span>Uncompleted Tasks ({overdueTasks.length})</span>
+                      <span>Overdue Tasks ({overdueTasks.length})</span>
                     </div>
                     {isUncompletedOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                   </Button>
