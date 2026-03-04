@@ -432,7 +432,7 @@ export default function AquaFlowPlanner() {
                       key={date.toISOString()}
                       onClick={() => setSelectedDate(date)}
                       className={cn(
-                        "relative flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all border",
+                        "relative flex flex-col items-center justify-center py-4 px-1 rounded-xl transition-all border min-h-[84px]",
                         isActive 
                           ? "bg-primary text-white border-primary shadow-md scale-105" 
                           : "bg-white text-muted-foreground border-transparent hover:border-primary/20",
@@ -442,13 +442,13 @@ export default function AquaFlowPlanner() {
                       {status?.hasTasks && (
                         <div 
                           className={cn(
-                            "absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full",
+                            "absolute bottom-2 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full",
                             status.allCompleted ? "bg-green-500" : "bg-red-500",
                             isActive && "ring-1 ring-white"
                           )} 
                         />
                       )}
-                      <span className="text-[10px] uppercase font-bold opacity-70">
+                      <span className="text-[10px] uppercase font-bold opacity-70 mb-0.5">
                         {format(date, "EEE")}
                       </span>
                       <span className="text-base font-bold">
