@@ -121,10 +121,10 @@ export default function AquaFlowPlanner() {
   const { data: prefData } = useDoc<any>(prefRef)
 
   // Logic to determine the current "Flow Date"
-  // A flow day starts at wake-up time.
+  // A flow day starts at wake-up time. Default is 00:00 for every day.
   const activeFlowDateStr = useMemo(() => {
     const todayStr = format(now, "yyyy-MM-dd")
-    const todayPref = prefData?.[todayStr] || { wakeUpTime: prefData?.wakeUpTime || "00:00" }
+    const todayPref = prefData?.[todayStr] || { wakeUpTime: "00:00" }
     const nowTimeStr = format(now, "HH:mm")
 
     if (todayPref.wakeUpTime !== "00:00" && nowTimeStr < todayPref.wakeUpTime) {
@@ -140,36 +140,35 @@ export default function AquaFlowPlanner() {
     // 1. Strictly older flow dates are always overdue
     if (task.date < activeFlowDateStr) return true
 
-    // 2. Future flow dates are never overdue
+    // 2. Future flow dates (relative to current flow window) are never overdue
     if (task.date > activeFlowDateStr) return false
     
     // 3. Current flow date tasks: overdue if past sleep time
+    // We use the specific preference for the task's date, defaulting to 00:00.
     const taskDatePref = prefData?.[task.date] || { 
-      sleepTime: prefData?.sleepTime || "00:00", 
-      wakeUpTime: prefData?.wakeUpTime || "00:00" 
+      sleepTime: "00:00", 
+      wakeUpTime: "00:00" 
     }
     const sleepTime = taskDatePref.sleepTime
     const wakeUpTime = taskDatePref.wakeUpTime
     
-    // Default functionality: if both are 00:00, don't mark as overdue by time until set
+    // If schedule isn't set (both 00:00), don't mark as overdue by time logic until midnight calendar change.
     if (sleepTime === "00:00" && wakeUpTime === "00:00") return false
     
     const nowTimeStr = format(now, "HH:mm")
     
-    // Cross-midnight logic:
+    // Cross-midnight logic for the flow window:
     if (sleepTime > wakeUpTime) {
-      // Standard day shift (e.g., 08:00 - 23:00)
+      // Standard shift (e.g., 08:00 - 23:00)
+      // It's overdue if it's past sleep time OR before the wake-up time of this "flow day"
       return nowTimeStr > sleepTime || nowTimeStr < wakeUpTime
     } else {
       // Night owl shift (e.g., 14:00 - 02:00 next day)
-      // If we are currently in this flow day (decided by activeFlowDateStr),
-      // and nowTimeStr is morning (e.g. 01:00) but past sleepTime (e.g. 00:30), it's overdue.
       if (nowTimeStr >= wakeUpTime) {
-        // Afternoon/Evening of the flow day
-        if (sleepTime < wakeUpTime) return false; // Sleep is tomorrow morning
-        return nowTimeStr > sleepTime;
+        // We are in the start part of the shift (afternoon/evening)
+        return false; // Not overdue yet, sleep is tomorrow AM
       } else {
-        // Early morning of the next calendar day
+        // We are in the early morning part of the next calendar day
         return nowTimeStr > sleepTime;
       }
     }
@@ -178,13 +177,8 @@ export default function AquaFlowPlanner() {
   const selectedDateKey = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate])
 
   const currentSchedule = useMemo(() => {
-    if (prefData && prefData[selectedDateKey]) {
-      return prefData[selectedDateKey]
-    }
-    return { 
-      wakeUpTime: prefData?.wakeUpTime || "00:00", 
-      sleepTime: prefData?.sleepTime || "00:00" 
-    }
+    // Strictly return the day's schedule or 00:00. No global fallbacks.
+    return prefData?.[selectedDateKey] || { wakeUpTime: "00:00", sleepTime: "00:00" }
   }, [prefData, selectedDateKey])
 
   const tasksRef = useMemoFirebase(() => {
@@ -310,12 +304,10 @@ export default function AquaFlowPlanner() {
 
   const handleScheduleChange = (newSchedule: DailySchedule) => {
     if (!prefRef || !user) return
+    // Only update the specific date key. Do not set global defaults.
     setDocumentNonBlocking(prefRef, {
       id: "profile",
-      [selectedDateKey]: newSchedule,
-      // Keep global defaults for new days
-      wakeUpTime: prefData?.wakeUpTime || "00:00",
-      sleepTime: prefData?.sleepTime || "00:00"
+      [selectedDateKey]: newSchedule
     }, { merge: true })
   }
 
